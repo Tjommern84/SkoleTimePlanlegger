@@ -169,24 +169,23 @@ export function useAllClassGroups(schoolYearId: number | undefined) {
     queryKey: ["allClassGroups", schoolYearId],
     queryFn: async (): Promise<ClassGroupInfo[]> => {
       const trinnList = await api.trinn.list(schoolYearId as number);
-      const result: ClassGroupInfo[] = [];
-      for (const t of trinnList) {
-        const classes = await api.classes.list(t.id);
-        for (const c of classes) {
-          const groups = await fetch(`${API_BASE_URL}/api/class-groups?school_class_id=${c.id}`, {
+      const classesByTrinn = await Promise.all(trinnList.map((t) => api.classes.list(t.id)));
+      const classEntries = trinnList.flatMap((t, i) => classesByTrinn[i].map((c) => ({ t, c })));
+      const groupsByClass = await Promise.all(
+        classEntries.map(({ c }) =>
+          fetch(`${API_BASE_URL}/api/class-groups?school_class_id=${c.id}`, {
             credentials: "include",
-          }).then((r) => r.json());
-          for (const g of groups as { id: number; label: string }[]) {
-            result.push({
-              id: g.id,
-              label: g.label === "whole" ? c.name : `${c.name} (${g.label})`,
-              className: c.name,
-              trinnLevel: t.level,
-            });
-          }
-        }
-      }
-      return result;
+          }).then((r) => r.json() as Promise<{ id: number; label: string }[]>),
+        ),
+      );
+      return classEntries.flatMap(({ t, c }, i) =>
+        groupsByClass[i].map((g) => ({
+          id: g.id,
+          label: g.label === "whole" ? c.name : `${c.name} (${g.label})`,
+          className: c.name,
+          trinnLevel: t.level,
+        })),
+      );
     },
     enabled: schoolYearId !== undefined,
   });
