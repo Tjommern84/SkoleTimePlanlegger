@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -6,11 +8,14 @@ from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_current_user
 from app.db.base import Base, get_db
+from app.db.models.user import User
+from app.db.models.zone import ZoneMembership, ZoneRole
 from app.main import app
 from tests.fixtures.school_example_data import seed_school_example_data
 
 
 class _FakeUser:
+    id = 1
     email = "test@example.com"
     name = "Test User"
 
@@ -28,6 +33,17 @@ def client_with_data():
     seed_session = TestingSessionLocal()
     result = seed_school_example_data(seed_session)
     school_year_id = result["school_year"].id
+    zone_id = result["school_year"].zone_id
+    seed_session.add(User(id=1, google_sub="fake-sub", email=_FakeUser.email, name=_FakeUser.name))
+    seed_session.add(
+        ZoneMembership(
+            zone_id=zone_id,
+            user_id=1,
+            role=ZoneRole.OWNER,
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        )
+    )
+    seed_session.commit()
     seed_session.close()
 
     def override_get_db():
@@ -39,7 +55,9 @@ def client_with_data():
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = lambda: _FakeUser()
-    yield TestClient(app), school_year_id
+    test_client = TestClient(app)
+    test_client.headers["X-Zone-Id"] = str(zone_id)
+    yield test_client, school_year_id
     app.dependency_overrides.clear()
 
 

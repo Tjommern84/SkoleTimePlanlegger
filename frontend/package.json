@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "prepare:bg": "node scripts/prepare-background.js"
+    "prepare:bg": "node scripts/prepare-background.js",
+    "gen:types": "openapi-typescript http://localhost:8123/openapi.json -o src/types/domain.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

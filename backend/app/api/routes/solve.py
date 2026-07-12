@@ -5,12 +5,13 @@ from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, zone_membership_for_school_year
 from app.db.models.timetable import GeneratedTimetable, TimetableSlot
+from app.db.models.user import User
 from app.schemas.timetable import GeneratedTimetableRead
 from app.solver.solve_service import solve_school_year_variants
 
-router = APIRouter(prefix="/api", tags=["solve"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/api", tags=["solve"])
 
 
 class SolveRequest(BaseModel):
@@ -40,7 +41,8 @@ class SolveResponse(BaseModel):
 
 
 @router.post("/solve", response_model=SolveResponse)
-def solve(payload: SolveRequest, db: Session = Depends(get_db)):
+def solve(payload: SolveRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    zone_membership_for_school_year(db, user, payload.school_year_id)
     variant_count = max(1, min(payload.variant_count, 5))
     results = solve_school_year_variants(
         db,
@@ -121,10 +123,13 @@ def solve(payload: SolveRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/generated-timetables/{generated_timetable_id}/activate", response_model=VariantSummary)
-def activate_generated_timetable(generated_timetable_id: int, db: Session = Depends(get_db)):
+def activate_generated_timetable(
+    generated_timetable_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+):
     generated = db.get(GeneratedTimetable, generated_timetable_id)
     if generated is None:
         raise HTTPException(404, "Generated timetable not found")
+    zone_membership_for_school_year(db, user, generated.school_year_id)
 
     db.execute(
         update(GeneratedTimetable)
@@ -146,7 +151,8 @@ def activate_generated_timetable(generated_timetable_id: int, db: Session = Depe
 
 
 @router.get("/school-years/{school_year_id}/timetable/active", response_model=GeneratedTimetableRead)
-def get_active_timetable(school_year_id: int, db: Session = Depends(get_db)):
+def get_active_timetable(school_year_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    zone_membership_for_school_year(db, user, school_year_id)
     stmt = select(GeneratedTimetable).where(
         GeneratedTimetable.school_year_id == school_year_id, GeneratedTimetable.is_active.is_(True)
     )

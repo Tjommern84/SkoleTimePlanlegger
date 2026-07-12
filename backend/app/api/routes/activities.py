@@ -2,11 +2,25 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import get_current_user, get_db
-from app.db.models.activity import Activity, ActivityLeg, ActivityLegTeacher
+from app.api.deps import get_current_user, get_db, zone_membership_for_school_year
+from app.db.models.activity import Activity, ActivityLeg, ActivityLegTeacher, ActivityType
+from app.db.models.school_year import SchoolYear
+from app.db.models.user import User
 from app.schemas.activity import ActivityCreate, ActivityRead
 
-router = APIRouter(prefix="/api", tags=["activities"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/api", tags=["activities"])
+
+_EXPECTED_LEG_COUNT = {ActivityType.NORMAL: 1, ActivityType.SPLIT_PARALLEL: 2}
+
+
+def _validate_leg_count(activity_type: ActivityType, leg_count: int) -> None:
+    expected = _EXPECTED_LEG_COUNT.get(activity_type)
+    if expected is not None and leg_count != expected:
+        raise HTTPException(
+            400, f"{activity_type.value} activities must have exactly {expected} leg(s), got {leg_count}"
+        )
+    if activity_type == ActivityType.TRINNFAG and leg_count < 1:
+        raise HTTPException(400, "TRINNFAG activities must have at least 1 leg")
 
 
 def _to_read(obj: Activity) -> ActivityRead:
@@ -29,10 +43,11 @@ def _to_read(obj: Activity) -> ActivityRead:
     )
 
 
-def _load(db: Session, activity_id: int) -> Activity:
+def _load(db: Session, activity_id: int, zone_id: int) -> Activity:
     stmt = (
         select(Activity)
-        .where(Activity.id == activity_id)
+        .join(SchoolYear, SchoolYear.id == Activity.school_year_id)
+        .where(Activity.id == activity_id, SchoolYear.zone_id == zone_id)
         .options(selectinload(Activity.legs).selectinload(ActivityLeg.leg_teachers))
     )
     obj = db.scalars(stmt).first()
@@ -41,8 +56,27 @@ def _load(db: Session, activity_id: int) -> Activity:
     return obj
 
 
+def _get_or_404(db: Session, activity_id: int, zone_id: int) -> Activity:
+    obj = db.scalars(
+        select(Activity)
+        .join(SchoolYear, SchoolYear.id == Activity.school_year_id)
+        .where(Activity.id == activity_id, SchoolYear.zone_id == zone_id)
+    ).first()
+    if obj is None:
+        raise HTTPException(404, "Activity not found")
+    return obj
+
+
+def _zone_membership_for_activity(db: Session, user: User, activity_id: int):
+    activity = db.get(Activity, activity_id)
+    if activity is None:
+        raise HTTPException(404, "Activity not found")
+    return zone_membership_for_school_year(db, user, activity.school_year_id)
+
+
 @router.get("/activities", response_model=list[ActivityRead])
-def list_activities(school_year_id: int, db: Session = Depends(get_db)):
+def list_activities(school_year_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    zone_membership_for_school_year(db, user, school_year_id)
     stmt = (
         select(Activity)
         .where(Activity.school_year_id == school_year_id)
@@ -52,7 +86,10 @@ def list_activities(school_year_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/activities", response_model=ActivityRead, status_code=201)
-def create_activity(payload: ActivityCreate, db: Session = Depends(get_db)):
+def create_activity(payload: ActivityCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    membership = zone_membership_for_school_year(db, user, payload.school_year_id)
+    _validate_leg_count(payload.activity_type, len(payload.legs))
+
     obj = Activity(
         school_year_id=payload.school_year_id,
         activity_type=payload.activity_type,
@@ -75,18 +112,18 @@ def create_activity(payload: ActivityCreate, db: Session = Depends(get_db)):
             db.add(ActivityLegTeacher(activity_leg_id=leg.id, teacher_id=teacher_id))
 
     db.commit()
-    return _to_read(_load(db, obj.id))
+    return _to_read(_load(db, obj.id, membership.zone_id))
 
 
 @router.get("/activities/{activity_id}", response_model=ActivityRead)
-def get_activity(activity_id: int, db: Session = Depends(get_db)):
-    return _to_read(_load(db, activity_id))
+def get_activity(activity_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    membership = _zone_membership_for_activity(db, user, activity_id)
+    return _to_read(_load(db, activity_id, membership.zone_id))
 
 
 @router.delete("/activities/{activity_id}", status_code=204)
-def delete_activity(activity_id: int, db: Session = Depends(get_db)):
-    obj = db.get(Activity, activity_id)
-    if obj is None:
-        raise HTTPException(404, "Activity not found")
+def delete_activity(activity_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    membership = _zone_membership_for_activity(db, user, activity_id)
+    obj = _get_or_404(db, activity_id, membership.zone_id)
     db.delete(obj)
     db.commit()

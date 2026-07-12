@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { api } from "../api/client";
-import { useActivities, useAllClassGroups, type ClassGroupInfo } from "../api/hooks";
+import { api, type Activity } from "../api/client";
+import { useActivities, useAllClassGroups, useDeleteActivity, type ClassGroupInfo } from "../api/hooks";
 import { PageHeader } from "../components/ui/PageHeader";
 import { Card } from "../components/ui/Card";
 import { EmptyState } from "../components/ui/EmptyState";
+import { HintToggle } from "../components/ui/HintToggle";
+import { InfoNote } from "../components/ui/InfoNote";
 import { ActivityCard, type ActivityKind } from "../components/activities/ActivityCard";
+import { ActivityEditModal } from "../components/activities/ActivityEditModal";
 
 const TYPE_LABELS: Record<ActivityKind, string> = {
   NORMAL: "Normal",
@@ -23,6 +26,9 @@ export function ActivitiesPage({ schoolYearId }: { schoolYearId: number }) {
   const [trinnFilter, setTrinnFilter] = useState<string>("all");
   const [subjectFilter, setSubjectFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [editingActivity, setEditingActivity] = useState<Activity | "new" | null>(null);
+  const [showHint, setShowHint] = useState(false);
+  const deleteActivity = useDeleteActivity();
 
   const subjectById = Object.fromEntries((subjects.data ?? []).map((s) => [s.id, s]));
   const teacherById = Object.fromEntries((teachers.data ?? []).map((t) => [t.id, t]));
@@ -63,14 +69,59 @@ export function ActivitiesPage({ schoolYearId }: { schoolYearId: number }) {
         actions={
           <button
             type="button"
-            title="Redigeringsgrensesnitt for aktivitetsmatrisen kommer i en senere versjon"
-            className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-sm font-medium text-white opacity-60"
+            onClick={() => setEditingActivity("new")}
+            className="flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-2 text-sm font-medium text-white hover:bg-primary-dark"
           >
             <Plus className="h-4 w-4" />
             Ny aktivitet
           </button>
         }
       />
+
+      <Card className="mb-5">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-ink">Hva er en "aktivitet"?</h2>
+          <HintToggle checked={showHint} onChange={setShowHint} />
+        </div>
+        {showHint && (
+          <InfoNote>
+            <p>
+              En aktivitet er ett <strong>ukentlig gjentakende undervisningsmønster</strong>: ett fag, én eller flere
+              klasse(grupper), én eller flere lærere, hvor lenge økten varer, og hvor mange ganger i uken den skjer.
+              Solveren plasserer deretter hver aktivitet i timeplanen basert på disse opplysningene.
+            </p>
+            <p className="mt-2">
+              Hver aktivitet består av ett eller flere <strong>"ben"</strong> — ett ben er én kombinasjon av
+              klassegruppe + fag + lærer(e) som skjer i akkurat det samme tidsrommet som de andre bena i aktiviteten.
+              Hvor mange ben du trenger avhenger av typen:
+            </p>
+            <ul className="mt-2 list-disc space-y-1.5 pl-5">
+              <li>
+                <strong>Normal</strong> (vanligst): ett ben — én klasse(gruppe), ett fag, én eller flere lærere
+                (samundervisning). Eksempel: "8A har norsk med lærer GB". Har klassen f.eks. 3 co-underviste
+                norsktimer og 1 solo-time i uken, oppretter du <strong>to separate</strong> Normal-aktiviteter (ulikt
+                antall forekomster og ulik lærerliste) — ikke én aktivitet med to ben.
+              </li>
+              <li>
+                <strong>Delt parallell</strong>: nøyaktig to ben. Brukes når en klasse deles i to halvgrupper som gjør
+                hvert sitt fag <strong>samtidig</strong>. Eksempel: halve 9A har mat og helse mens den andre
+                halvparten har naturfag, i akkurat samme periode. Skal gruppene bytte fag en annen økt i uken, lager
+                du en ny, egen aktivitet for det bytte.
+              </li>
+              <li>
+                <strong>Trinnfag</strong>: ett ben per parallellgruppe (kan være mange). Brukes når hele trinnet
+                samles i valgfrie/parallelle grupper på tvers av klassene samtidig, f.eks. valgfag eller
+                fremmedspråk. Har trinnet flere grupper enn klasser, setter du klassegruppe til
+                "Ingen hjemmeklasse" på de ekstra bena — de opptar da bare læreren, ikke en klasse.
+              </li>
+            </ul>
+            <p className="mt-2">
+              Listen under viser aktivitetene som allerede er opprettet, gruppert per trinn — bruk filtrene for å
+              finne igjen en bestemt aktivitet, og "Ny aktivitet"-knappen øverst for å opprette en ny.
+            </p>
+          </InfoNote>
+        )}
+      </Card>
 
       <div className="mb-5 flex flex-wrap gap-2">
         <select
@@ -138,6 +189,12 @@ export function ActivitiesPage({ schoolYearId }: { schoolYearId: number }) {
                     lines={lines}
                     kind={a.activity_type as ActivityKind}
                     occurrenceLabel={`${TYPE_LABELS[a.activity_type as ActivityKind]} · ${a.occurrences_per_week} × ${a.duration_ticks * 30} min`}
+                    onEdit={() => setEditingActivity(a)}
+                    onDelete={() => {
+                      if (confirm("Slette denne aktiviteten?")) {
+                        deleteActivity.mutate({ id: a.id, schoolYearId });
+                      }
+                    }}
                   />
                 );
               })}
@@ -145,6 +202,14 @@ export function ActivitiesPage({ schoolYearId }: { schoolYearId: number }) {
           </Card>
         ))}
       </div>
+
+      {editingActivity && (
+        <ActivityEditModal
+          schoolYearId={schoolYearId}
+          activity={editingActivity === "new" ? undefined : editingActivity}
+          onClose={() => setEditingActivity(null)}
+        />
+      )}
     </div>
   );
 }

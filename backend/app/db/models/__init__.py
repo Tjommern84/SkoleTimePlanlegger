@@ -12,6 +12,7 @@ from app.db.models.activity import (
 from app.db.models.solver_settings import SolverSettings
 from app.db.models.timetable import GeneratedTimetable, TimetableSlot
 from app.db.models.user import User
+from app.db.models.zone import Zone, ZoneMembership, ZoneInvitation, ZoneRole, ZoneInvitationStatus
 
 __all__ = [
     "SchoolYear",
@@ -33,4 +34,9 @@ __all__ = [
     "GeneratedTimetable",
     "TimetableSlot",
     "User",
+    "Zone",
+    "ZoneMembership",
+    "ZoneInvitation",
+    "ZoneRole",
+    "ZoneInvitationStatus",
 ]

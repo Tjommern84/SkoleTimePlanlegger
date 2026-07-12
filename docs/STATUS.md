@@ -1,6 +1,135 @@
 # Statusrapport — Timeplanlegger
 
-Sist oppdatert: 2026-07-07 (økt 4 — redesign + lærerredigering + alternative varianter)
+Sist oppdatert: 2026-07-12 (økt 6 — onboarding-UI for en ny skole)
+
+## Onboarding-UI: en ny skole kan nå settes opp fra bunnen kun via grensesnittet (denne økten)
+
+Forrige økt (soner) løste isolasjon mellom skoler, men en fersk sone var
+fortsatt en blindvei — ingen UI for å opprette skoleår/trinn/klasser/
+perioder/fag/aktiviteter, kun visning. Denne økten bygget full CRUD:
+
+- **Backend**: nye PATCH/DELETE-ruter for skoleår, perioder, trinn, klasser,
+  klassegrupper, fag og fag-timetall (alle sonescopet på samme måte som
+  resten av API-et). Sletting er bevisst "restrict" (blokkeres med 409 hvis
+  noe fortsatt refererer raden), ikke kaskade — eneste unntak er
+  fag-timetall som slettes automatisk sammen med faget sitt. Ny
+  `_validate_leg_count`-sjekk i `POST /activities` håndhever nå
+  NORMAL=1/SPLIT_PARALLEL=2/TRINNFAG≥1-ben-regelen som før kun var
+  dokumentert, ikke håndhevet. Ny global `IntegrityError`→409-handler i
+  `main.py`.
+- **Reell bug funnet og rettet**: SQLite håndhever ikke fremmednøkler som
+  standard (i motsetning til Postgres i produksjon) — uten
+  `PRAGMA foreign_keys=ON` (nå satt i `db/base.py` ved engine-oppstart)
+  ville "restrict delete" stille og rolig IKKE blokkert noe i lokal
+  utvikling/tester, og latt foreldreløse rader ligge igjen.
+- **Frontend**: `GrunnoppsettPage.tsx`, `SubjectHoursPage.tsx` og
+  `ActivitiesPage.tsx` gikk fra rene visningssider til full
+  opprett/rediger/slett. Ny "opprett skoleår"-inngang (kritisk, siden en
+  fersk sone har null skoleår) i både `App.tsx`s tomme-tilstand og en
+  "+"-knapp i `Topbar.tsx`. Ny `SubjectEditModal` og `ActivityEditModal`
+  (aktivitetsredigering er bevisst "slett og gjenopprett" under panseret,
+  ikke en ekte in-place-oppdatering — enklere gitt at brukeren valgte en
+  enkel skjema-modal, ikke en full matrise-editor).
+- **Alt verifisert**: 69 backend-tester grønne (opp fra 60, inkl. nye
+  restrict-delete- og IDOR-tester), frontend `tsc -b`/`lint`/`build` rene,
+  og en full live nettleserøkt der en **helt fersk bruker med tom sone**
+  bygget en fiktiv "ny skole" utelukkende gjennom grensesnittet — skoleår →
+  trinn → klasse → perioder → fag med timetall → lærer → aktivitet — og
+  "Generer timeplan" fant en gyldig løsning (status gikk fra "Utkast
+  lagret" til "Gyldig plan"), bekreftet i både Aktiviteter- og
+  Timeplan-rutenett-visningen. To reelle frontend-bugs ble funnet og
+  rettet under selve denne verifiseringen (ikke i produksjonskode, men i
+  test-selektorene) — ingen nye appfeil utover FK-pragma-funnet over.
+- **Ikke bygget i denne omgang** (bevisst utelatt): sletting/redigering av
+  klassegrupper er der, men ingen full matrise-/regnearkeditor for
+  aktiviteter (kun én-om-gangen-skjema, som brukeren valgte); ingen
+  "kopier periodeoppsett fra mal"-snarvei.
+
+## Multi-tenant "soner" med deling/invitasjon (denne økten)
+
+Appen var bevisst enkelt-tenant (kun Lise + kollega, hardkodet
+`ALLOWED_EMAILS`-allowlist, ingen tabell hadde noen eier-/tenant-kolonne).
+Nytt mål: alle med en Google-konto kan logge inn, hver med sin egen
+isolerte "sone" (arbeidsområde), som kan deles med andre Google-kontoer
+via invitasjon (full lese/skrive-tilgang for inviterte medlemmer). Full
+plan ligger i den godkjente plan-filen fra denne økten; kort oppsummert
+hva som er bygget:
+
+- **Ny datamodell**: `Zone`, `ZoneMembership` (rolle eier/medlem),
+  `ZoneInvitation` (status pending/accepted/revoked) —
+  `backend/app/db/models/zone.py`. `SchoolYear` og `Teacher` fikk en ny
+  `zone_id`-kolonne (de gamle globale unik-constraintene på
+  `label`/`initials` ble erstattet med sonescopede sammensatte
+  constraints). Alt annet (Subject, Activity, GeneratedTimetable osv.)
+  arver sone-tilhørighet transitivt via eksisterende FK-kjede.
+- **Migrasjon** `a3f9c1d02b4e_add_zones_multi_tenancy.py` bakfyller
+  eksisterende data til én sone eid av (første e-post i)
+  `ALLOWED_EMAILS`, med øvrige e-poster lagt til som medlem (hvis
+  brukeren finnes) eller ventende invitasjon (hvis ikke). Kjørt og
+  verifisert mot ekte dev-DB.
+- **Innlogging er nå åpen for alle Google-kontoer** — allowlist-sjekken i
+  `auth.py` er fjernet. `sync_zone_state_on_login()`
+  (`backend/app/services/zones.py`) kjører på hver innlogging: godkjenner
+  automatisk ventende invitasjoner for brukerens e-post, og oppretter en
+  ny personlig eid sone KUN hvis brukeren ikke endte opp med noe
+  medlemskap i det hele tatt (så en invitert bruker aldri får en ekstra
+  tom sone). Ingen e-postutsending bygget — invitasjon er ren
+  "auto-godkjenn ved neste innlogging".
+- **Sone-tilgang utledes fra ressursen, ikke fra en global header**: de
+  fleste ruter mottar allerede en `school_year_id`/`teacher_id` osv. og
+  sjekker medlemskap via sonen den tilhører
+  (`zone_membership_for_school_year`/`_for_teacher` i `deps.py`). Kun de
+  fire rot-endepunktene uten noen eksisterende id å utlede fra
+  (`GET/POST /school-years`, `GET/POST /teachers`) krever en eksplisitt
+  `X-Zone-Id`-header. Dette var bevisst valgt bl.a. fordi
+  Excel-eksport-lenken er en vanlig `<a href>`-nedlasting som ikke kan
+  sende egendefinerte headere.
+- **Alle eksisterende ruter er sonescopet** (teachers, school_years,
+  subjects, activities, solver_settings, solve, export) — ingen av dem
+  filtrerte på bruker/sone i det hele tatt før denne økten. To reelle
+  krysslekkasje-bugs ble også fikset som en direkte konsekvens (ville
+  vært harmløse i en enkelt-tenant-verden, men lekker data på tvers av
+  soner nå): en ubetinget `select(Subject)` i `solve_service.py` og en
+  ubetinget `select(Teacher)` i `excel_export.py`.
+- **Ny `zones.py`-rute** (`/api/zones/current/...`): omdøp sone, liste
+  medlemmer, invitere/liste/tilbakekalle invitasjoner, fjerne medlem (kun
+  eier for de administrative handlingene; kan ikke fjerne sonens siste
+  eier).
+- **Frontend**: `client.ts` sender `X-Zone-Id` automatisk (modul-nivå
+  state, ikke tredd gjennom hver hook); `App.tsx` fikk en ny `ZoneGate`
+  mellom innloggingssjekken og Dashboard som velger aktiv sone (fra
+  localStorage) FØR noen sonescopet data hentes; `Topbar.tsx` fikk en
+  `ZoneSwitcher` (kun synlig ved >1 sone) og en "Del sonen"-knapp som
+  åpner `ManageCollaboratorsModal` (inviter/fjern medlemmer for eier,
+  read-only medlemsliste for medlemmer).
+- **To reelle frontend-bugs funnet og rettet under live nettleserverifisering**:
+  (a) `ZoneGate` satte opprinnelig aktiv sone i en `useEffect`, som kjører
+  ETTER at `Dashboard`s egne datahook-er (barn) allerede hadde skutt av
+  sine første kall uten `X-Zone-Id`-header (React kjører barn-effekter før
+  foreldre-effekter) — flyttet til å settes synkront i
+  `useState`-initialiseringen i stedet; (b) `ManageCollaboratorsModal` ble
+  rendret som barn av `<header className="...backdrop-blur-sm">` i
+  `Topbar.tsx` — `backdrop-filter` oppretter et nytt "containing block" for
+  `position: fixed`-etterkommere i Chromium, så modalen ble posisjonert
+  relativt til den ~68px høye headeren i stedet for viewporten. Fikset med
+  `createPortal(..., document.body)`.
+- **Alt verifisert**: 60 backend-tester grønne (inkl. nye
+  `test_zone_isolation.py` — den kritiske IDOR-testen som bekrefter at et
+  medlem av sone A ikke kan poste data som peker til sone B sin
+  `school_year_id`, samt `test_zones_routes.py` og `test_zone_services.py`
+  for invitasjons-/rolle-logikk), frontend `tsc -b`/`lint`/`build` rene,
+  og en full interaksjonstest i ekte nettleser (Playwright) mot den
+  virkelige (migrerte) dev-databasen: innlogget som eier (manuell
+  sesjonscookie) → "Del sonen"-modal viser riktig medlem/rolle → inviter
+  en test-e-post → vises som "Venter" → tilbakekall → forsvinner; separat
+  logget inn som et ekte, ekstra medlem lagt til i samme sone → ser samme
+  delte data (lærere/fag) → "Del sonen" viser begge medlemmer men uten
+  inviter-/fjern-kontroller (riktig, siden de ikke er eier) → ingen
+  konsollfeil i noen av øktene.
+- **Ikke bygget i denne omgang** (bevisst utelatt, ikke bugs): faktisk
+  e-postutsending av invitasjoner (krever SMTP/tjeneste-oppsett), en
+  tredje skrivebeskyttet rolle, og overføring av eierskap/sletting av en
+  sone.
 
 ## "Generer flere alternativer" er nå en ekte funksjon
 

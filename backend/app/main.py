@@ -1,11 +1,24 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy.exc import IntegrityError
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api.routes import activities, auth, export, school_years, solve, solver_settings, subjects, teachers
+from app.api.routes import activities, auth, export, school_years, solve, solver_settings, subjects, teachers, zones
 from app.config import settings
 
 app = FastAPI(title="Timetable Generator API")
+
+
+@app.exception_handler(IntegrityError)
+def handle_integrity_error(request: Request, exc: IntegrityError) -> JSONResponse:
+    # Deleting a row that's still referenced elsewhere (e.g. a trinn that
+    # still has classes) hits a foreign-key constraint -- surface that as a
+    # clean 409 instead of a raw 500, for every route, not just new ones.
+    return JSONResponse(
+        status_code=409,
+        content={"detail": "Kan ikke fullføre: dataene brukes fortsatt av noe annet."},
+    )
 
 # Frontend (Vercel) and backend (Render) are separate origins in
 # production, so the browser needs explicit CORS permission -- with
@@ -39,6 +52,7 @@ app.include_router(activities.router)
 app.include_router(solver_settings.router)
 app.include_router(solve.router)
 app.include_router(export.router)
+app.include_router(zones.router)
 
 
 @app.get("/api/health")

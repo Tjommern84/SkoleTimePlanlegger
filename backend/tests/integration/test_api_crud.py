@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -6,10 +8,13 @@ from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_current_user
 from app.db.base import Base, get_db
+from app.db.models.user import User
+from app.db.models.zone import Zone, ZoneMembership, ZoneRole
 from app.main import app
 
 
 class _FakeUser:
+    id = 1
     email = "test@example.com"
     name = "Test User"
 
@@ -24,6 +29,25 @@ def client():
     Base.metadata.create_all(engine)
     TestingSessionLocal = sessionmaker(bind=engine)
 
+    # Seed a User + Zone + owner ZoneMembership matching _FakeUser so the
+    # now zone-aware routes have something real to authorize against.
+    session = TestingSessionLocal()
+    session.add(User(id=1, google_sub="fake-sub", email=_FakeUser.email, name=_FakeUser.name))
+    zone = Zone(name="Test zone", created_at=datetime.now(timezone.utc).replace(tzinfo=None))
+    session.add(zone)
+    session.flush()
+    session.add(
+        ZoneMembership(
+            zone_id=zone.id,
+            user_id=1,
+            role=ZoneRole.OWNER,
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        )
+    )
+    session.commit()
+    zone_id = zone.id
+    session.close()
+
     def override_get_db():
         session = TestingSessionLocal()
         try:
@@ -33,7 +57,9 @@ def client():
 
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_current_user] = lambda: _FakeUser()
-    yield TestClient(app)
+    test_client = TestClient(app)
+    test_client.headers["X-Zone-Id"] = str(zone_id)
+    yield test_client
     app.dependency_overrides.clear()
 
 

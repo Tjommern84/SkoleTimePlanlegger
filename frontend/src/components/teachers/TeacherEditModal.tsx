@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Info, StickyNote, X } from "lucide-react";
-import { API_BASE_URL, type Subject, type Teacher } from "../../api/client";
+import type { Subject, Teacher } from "../../api/client";
 import {
   useAddTeacherQualification,
   useAddTeacherUnavailability,
+  usePeriods,
   useRemoveTeacherQualification,
   useRemoveTeacherUnavailability,
   useTeacherQualifications,
@@ -12,7 +12,6 @@ import {
   useUpdateTeacher,
   useUpdateTeacherQualification,
 } from "../../api/hooks";
-import type { PeriodInfo } from "../../lib/grid";
 
 const DAY_ORDER = ["MON", "TUE", "WED", "THU", "FRI"] as const;
 const DAY_LABELS: Record<string, string> = {
@@ -55,13 +54,7 @@ export function TeacherEditModal({ teacher, schoolYearId, subjects, onClose }: T
   const addUnavailability = useAddTeacherUnavailability(teacher.id);
   const removeUnavailability = useRemoveTeacherUnavailability(teacher.id);
 
-  const periods = useQuery<PeriodInfo[]>({
-    queryKey: ["periods", schoolYearId],
-    queryFn: () =>
-      fetch(`${API_BASE_URL}/api/periods?school_year_id=${schoolYearId}`, { credentials: "include" }).then((r) =>
-        r.json(),
-      ),
-  });
+  const periods = usePeriods(schoolYearId);
   const maxPeriodByDay: Record<string, number> = {};
   for (const p of periods.data ?? []) {
     maxPeriodByDay[p.day_of_week] = Math.max(maxPeriodByDay[p.day_of_week] ?? 0, p.period_number);

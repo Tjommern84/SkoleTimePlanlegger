@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useActivateVariant,
   useActiveTimetable,
@@ -9,7 +10,7 @@ import {
   useSubjects,
   useTeachers,
 } from "./api/hooks";
-import type { VariantSummary } from "./api/client";
+import { setActiveZoneId, type VariantSummary, type ZoneSummary } from "./api/client";
 import { LoginPage } from "./pages/LoginPage";
 import { TeachersPage } from "./pages/TeachersPage";
 import { SubjectHoursPage } from "./pages/SubjectHoursPage";
@@ -21,13 +22,21 @@ import { GrunnoppsettPage } from "./pages/GrunnoppsettPage";
 import { AppShell } from "./components/layout/AppShell";
 import { Sidebar, type NavKey } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
+import { CreateSchoolYearModal } from "./components/schoolyear/CreateSchoolYearModal";
 import type { Tone } from "./components/ui/tone";
 
-function Dashboard() {
+interface DashboardProps {
+  zones: ZoneSummary[];
+  activeZoneId: number;
+  onZoneChange: (id: number) => void;
+}
+
+function Dashboard({ zones, activeZoneId, onZoneChange }: DashboardProps) {
   const me = useMe();
   const [nav, setNav] = useState<NavKey>("hours");
   const schoolYears = useSchoolYears();
   const [schoolYearId, setSchoolYearId] = useState<number | null>(null);
+  const [creatingSchoolYear, setCreatingSchoolYear] = useState(false);
 
   const years = schoolYears.data ?? [];
   if (schoolYearId === null && years.length > 0) {
@@ -98,11 +107,24 @@ function Dashboard() {
           userEmail={me.data?.email}
           generating={solve.isPending}
           onGenerate={() => runSolve(true, 1)}
+          zones={zones}
+          activeZoneId={activeZoneId}
+          onZoneChange={onZoneChange}
+          onCreateSchoolYear={() => setCreatingSchoolYear(true)}
         />
       }
     >
       {schoolYearId === null ? (
-        <p className="text-sm text-ink-muted">Ingen skoleår funnet.</p>
+        <div className="flex flex-col items-center gap-3 py-16 text-center">
+          <p className="text-sm text-ink-muted">Ingen skoleår funnet ennå.</p>
+          <button
+            type="button"
+            onClick={() => setCreatingSchoolYear(true)}
+            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+          >
+            Opprett skoleår
+          </button>
+        </div>
       ) : (
         <>
           {nav === "grunnoppsett" && <GrunnoppsettPage schoolYearId={schoolYearId} />}
@@ -125,8 +147,47 @@ function Dashboard() {
           {nav === "grid" && <TimetableGridPage schoolYearId={schoolYearId} />}
         </>
       )}
+      {creatingSchoolYear && (
+        <CreateSchoolYearModal
+          onClose={() => setCreatingSchoolYear(false)}
+          onCreated={(id) => {
+            setSchoolYearId(id);
+            setCreatingSchoolYear(false);
+          }}
+        />
+      )}
     </AppShell>
   );
+}
+
+const ACTIVE_ZONE_STORAGE_KEY = "activeZoneId";
+
+/** Sits between the login gate and Dashboard: picks which zone the user is
+ * currently working in (most users only ever have one) before any
+ * zone-scoped data (school years, teachers, ...) is fetched. */
+function ZoneGate({ zones }: { zones: ZoneSummary[] }) {
+  const queryClient = useQueryClient();
+  // Set synchronously during the lazy useState initializer (which runs
+  // during render, before Dashboard's children mount) rather than in a
+  // useEffect -- React commits child effects before parent effects, so an
+  // effect here would fire AFTER Dashboard's own useSchoolYears/useTeachers
+  // queries had already gone out with no X-Zone-Id header at all.
+  const [activeZoneId, setActiveZoneIdState] = useState<number>(() => {
+    const stored = Number(localStorage.getItem(ACTIVE_ZONE_STORAGE_KEY));
+    const initial = zones.some((z) => z.id === stored) ? stored : zones[0].id;
+    setActiveZoneId(initial);
+    localStorage.setItem(ACTIVE_ZONE_STORAGE_KEY, String(initial));
+    return initial;
+  });
+
+  const handleZoneChange = (id: number) => {
+    queryClient.clear();
+    setActiveZoneId(id);
+    localStorage.setItem(ACTIVE_ZONE_STORAGE_KEY, String(id));
+    setActiveZoneIdState(id);
+  };
+
+  return <Dashboard zones={zones} activeZoneId={activeZoneId} onZoneChange={handleZoneChange} />;
 }
 
 function App() {
@@ -138,7 +199,16 @@ function App() {
   if (!me.data) {
     return <LoginPage />;
   }
-  return <Dashboard />;
+  if (me.data.zones.length === 0) {
+    // Shouldn't normally happen (a zone is auto-provisioned on login), but
+    // could occur if the user was just removed from their only zone.
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-ink-muted">
+        Du har ikke tilgang til noen sone lenger.
+      </div>
+    );
+  }
+  return <ZoneGate zones={me.data.zones} />;
 }
 
 export default App;

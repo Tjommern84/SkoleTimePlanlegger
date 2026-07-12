@@ -7,9 +7,11 @@ from app.db.models.period import DayOfWeek
 
 class Teacher(Base):
     __tablename__ = "teachers"
+    __table_args__ = (UniqueConstraint("zone_id", "initials"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    initials: Mapped[str] = mapped_column(String(10), unique=True, nullable=False)
+    zone_id: Mapped[int] = mapped_column(ForeignKey("zones.id"), nullable=False)
+    initials: Mapped[str] = mapped_column(String(10), nullable=False)
     full_name: Mapped[str] = mapped_column(String(200), nullable=False)
 
 

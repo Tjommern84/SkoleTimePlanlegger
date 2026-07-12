@@ -105,7 +105,8 @@ export interface paths {
         delete: operations["delete_school_year_api_school_years__school_year_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update School Year */
+        patch: operations["update_school_year_api_school_years__school_year_id__patch"];
         trace?: never;
     };
     "/api/periods": {
@@ -126,6 +127,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/periods/{period_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Period */
+        delete: operations["delete_period_api_periods__period_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Period */
+        patch: operations["update_period_api_periods__period_id__patch"];
+        trace?: never;
+    };
     "/api/trinn": {
         parameters: {
             query?: never;
@@ -142,6 +161,24 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/trinn/{trinn_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Trinn */
+        delete: operations["delete_trinn_api_trinn__trinn_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Trinn */
+        patch: operations["update_trinn_api_trinn__trinn_id__patch"];
         trace?: never;
     };
     "/api/classes": {
@@ -162,6 +199,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/classes/{class_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Class */
+        delete: operations["delete_class_api_classes__class_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Class */
+        patch: operations["update_class_api_classes__class_id__patch"];
+        trace?: never;
+    };
     "/api/class-groups": {
         parameters: {
             query?: never;
@@ -178,6 +233,24 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/class-groups/{class_group_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Class Group */
+        delete: operations["delete_class_group_api_class_groups__class_group_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Class Group */
+        patch: operations["update_class_group_api_class_groups__class_group_id__patch"];
         trace?: never;
     };
     "/api/teachers": {
@@ -319,7 +392,8 @@ export interface paths {
         delete: operations["delete_subject_api_subjects__subject_id__delete"];
         options?: never;
         head?: never;
-        patch?: never;
+        /** Update Subject */
+        patch: operations["update_subject_api_subjects__subject_id__patch"];
         trace?: never;
     };
     "/api/subject-hour-allocations": {
@@ -338,6 +412,24 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/subject-hour-allocations/{allocation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Subject Hour Allocation */
+        delete: operations["delete_subject_hour_allocation_api_subject_hour_allocations__allocation_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Subject Hour Allocation */
+        patch: operations["update_subject_hour_allocation_api_subject_hour_allocations__allocation_id__patch"];
         trace?: never;
     };
     "/api/activities": {
@@ -457,6 +549,92 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/zones/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Rename Zone */
+        patch: operations["rename_zone_api_zones_current_patch"];
+        trace?: never;
+    };
+    "/api/zones/current/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Members */
+        get: operations["list_members_api_zones_current_members_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/zones/current/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Invitations */
+        get: operations["list_invitations_api_zones_current_invitations_get"];
+        put?: never;
+        /** Create Invitation */
+        post: operations["create_invitation_api_zones_current_invitations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/zones/current/invitations/{invitation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Invitation */
+        delete: operations["revoke_invitation_api_zones_current_invitations__invitation_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/zones/current/members/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove Member */
+        delete: operations["remove_member_api_zones_current_members__user_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1047,6 +1225,46 @@ export interface components {
             /** Is Active */
             is_active: boolean;
         };
+        /** ZoneInvitationCreate */
+        ZoneInvitationCreate: {
+            /** Email */
+            email: string;
+        };
+        /** ZoneInvitationRead */
+        ZoneInvitationRead: {
+            /** Id */
+            id: number;
+            /** Email */
+            email: string;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** ZoneMemberRead */
+        ZoneMemberRead: {
+            /** User Id */
+            user_id: number;
+            /** Email */
+            email: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
+        };
+        /** ZoneRename */
+        ZoneRename: {
+            /** Name */
+            name: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1249,6 +1467,41 @@ export interface operations {
             };
         };
     };
+    update_school_year_api_school_years__school_year_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                school_year_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchoolYearCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolYearRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_periods_api_periods_get: {
         parameters: {
             query: {
@@ -1295,6 +1548,70 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodDefinitionRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_period_api_periods__period_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                period_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_period_api_periods__period_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                period_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PeriodDefinitionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1377,6 +1694,70 @@ export interface operations {
             };
         };
     };
+    delete_trinn_api_trinn__trinn_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trinn_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_trinn_api_trinn__trinn_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                trinn_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrinnCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrinnRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_classes_api_classes_get: {
         parameters: {
             query: {
@@ -1441,6 +1822,70 @@ export interface operations {
             };
         };
     };
+    delete_class_api_classes__class_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_class_api_classes__class_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchoolClassCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SchoolClassRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_class_groups_api_class_groups_get: {
         parameters: {
             query: {
@@ -1487,6 +1932,70 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ClassGroupRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_class_group_api_class_groups__class_group_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_group_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_class_group_api_class_groups__class_group_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                class_group_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClassGroupCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1936,6 +2445,41 @@ export interface operations {
             };
         };
     };
+    update_subject_api_subjects__subject_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                subject_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubjectCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubjectRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_subject_hour_allocations_api_subject_hour_allocations_get: {
         parameters: {
             query: {
@@ -1982,6 +2526,70 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SubjectHourAllocationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_subject_hour_allocation_api_subject_hour_allocations__allocation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_subject_hour_allocation_api_subject_hour_allocations__allocation_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                allocation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SubjectHourAllocationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2302,6 +2910,170 @@ export interface operations {
                 content: {
                     "application/json": unknown;
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rename_zone_api_zones_current_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZoneRename"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_members_api_zones_current_members_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneMemberRead"][];
+                };
+            };
+        };
+    };
+    list_invitations_api_zones_current_invitations_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneInvitationRead"][];
+                };
+            };
+        };
+    };
+    create_invitation_api_zones_current_invitations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZoneInvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZoneInvitationRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_invitation_api_zones_current_invitations__invitation_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_member_api_zones_current_members__user_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

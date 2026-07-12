@@ -166,7 +166,10 @@ def _resolve_fixed_placements(
     if fixed_tick is None:
         return {}
 
-    subject_rows = {s.id: s for s in db.scalars(select(Subject)).all()}
+    subject_rows = {
+        s.id: s
+        for s in db.scalars(select(Subject).where(Subject.school_year_id == school_year_id)).all()
+    }
     class_group_trinn_level = _class_group_trinn_level(db, school_year_id)
 
     fixed_placements: dict[int, int] = {}
@@ -192,7 +195,10 @@ def _resolve_krov10_session_keys(
     classes -- these get the krov10_preferred_periods soft placement
     preference (Phase 3).
     """
-    subject_rows = {s.id: s for s in db.scalars(select(Subject)).all()}
+    subject_rows = {
+        s.id: s
+        for s in db.scalars(select(Subject).where(Subject.school_year_id == school_year_id)).all()
+    }
     class_group_trinn_level = _class_group_trinn_level(db, school_year_id)
 
     keys: set[str] = set()

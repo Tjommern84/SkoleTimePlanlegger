@@ -28,6 +28,8 @@ from datetime import time
 
 from sqlalchemy.orm import Session
 
+from datetime import datetime, timezone
+
 from app.db.models.activity import Activity, ActivityLeg, ActivityLegTeacher, ActivityType
 from app.db.models.period import DayOfWeek, PeriodDefinition
 from app.db.models.school_year import SchoolYear
@@ -35,6 +37,7 @@ from app.db.models.solver_settings import SolverSettings
 from app.db.models.subject import Subject, SubjectHourAllocation
 from app.db.models.teacher import Teacher
 from app.db.models.trinn_class import ClassGroup, SchoolClass, Trinn
+from app.db.models.zone import Zone
 
 # (name, short_code, weekly_hours for trinn 8, 9, 10 -- None if not taught that year)
 SUBJECT_HOUR_TABLE: list[tuple[str, str, float | None, float | None, float | None]] = [
@@ -236,7 +239,11 @@ def _decompose_hours(total_hours: float, co_hours: float = 0.0, keep_half: bool 
 
 
 def seed_school_example_data(db: Session) -> dict:
-    school_year = SchoolYear(label="2025/2026")
+    zone = Zone(name="Test zone", created_at=datetime.now(timezone.utc).replace(tzinfo=None))
+    db.add(zone)
+    db.flush()
+
+    school_year = SchoolYear(zone_id=zone.id, label="2025/2026")
     db.add(school_year)
     db.flush()
 
@@ -291,7 +298,7 @@ def seed_school_example_data(db: Session) -> dict:
 
     teachers = {}
     for initials in TEACHER_INITIALS:
-        t = Teacher(initials=initials, full_name=initials)
+        t = Teacher(zone_id=zone.id, initials=initials, full_name=initials)
         db.add(t)
         db.flush()
         teachers[initials] = t

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.db.models.activity import Activity, ActivityLeg
 from app.db.models.period import DayOfWeek, PeriodDefinition
+from app.db.models.school_year import SchoolYear
 from app.db.models.subject import Subject
 from app.db.models.teacher import Teacher
 from app.db.models.timetable import GeneratedTimetable, TimetableSlot
@@ -34,6 +35,7 @@ def export_generated_timetable(db: Session, generated_timetable_id: int) -> Work
     if generated is None:
         raise ValueError(f"GeneratedTimetable {generated_timetable_id} not found")
     school_year_id = generated.school_year_id
+    zone_id = db.get(SchoolYear, school_year_id).zone_id
 
     periods = db.scalars(
         select(PeriodDefinition).where(PeriodDefinition.school_year_id == school_year_id)
@@ -55,7 +57,9 @@ def export_generated_timetable(db: Session, generated_timetable_id: int) -> Work
     activities_by_id = {a.id: a for a in activities}
 
     subjects_by_id = {s.id: s for s in db.scalars(select(Subject).where(Subject.school_year_id == school_year_id)).all()}
-    teachers_by_id = {t.id: t for t in db.scalars(select(Teacher)).all()}
+    teachers_by_id = {
+        t.id: t for t in db.scalars(select(Teacher).where(Teacher.zone_id == zone_id)).all()
+    }
 
     classes = db.scalars(
         select(SchoolClass)

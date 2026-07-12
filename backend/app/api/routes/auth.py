@@ -8,6 +8,8 @@ from app.auth.google_oauth import oauth
 from app.auth.session import SESSION_COOKIE_NAME, create_session_token
 from app.config import settings
 from app.db.models.user import User
+from app.db.models.zone import Zone, ZoneMembership
+from app.services.zones import sync_zone_state_on_login
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -26,8 +28,6 @@ async def auth_callback(request: Request, db: Session = Depends(get_db)):
         raise HTTPException(400, "Google did not return an email address")
 
     email = userinfo["email"].lower()
-    if email not in settings.allowed_emails_list:
-        raise HTTPException(403, "This account is not authorized to use this app")
 
     user = db.scalars(select(User).where(User.google_sub == userinfo["sub"])).first()
     if user is None:
@@ -37,6 +37,9 @@ async def auth_callback(request: Request, db: Session = Depends(get_db)):
         user.email = email
         user.name = userinfo.get("name", email)
     db.commit()
+    db.refresh(user)
+
+    sync_zone_state_on_login(db, user)
 
     response = RedirectResponse(url=settings.frontend_url)
     response.set_cookie(
@@ -64,5 +67,14 @@ def logout():
 
 
 @router.get("/me")
-def me(user: User = Depends(get_current_user)):
-    return {"email": user.email, "name": user.name}
+def me(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    rows = db.execute(
+        select(ZoneMembership, Zone)
+        .join(Zone, Zone.id == ZoneMembership.zone_id)
+        .where(ZoneMembership.user_id == user.id)
+    ).all()
+    return {
+        "email": user.email,
+        "name": user.name,
+        "zones": [{"id": zone.id, "name": zone.name, "role": m.role.value} for m, zone in rows],
+    }

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -7,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from app.auth.session import SESSION_COOKIE_NAME, create_session_token
 from app.db.base import Base, get_db
 from app.db.models.user import User
+from app.db.models.zone import Zone, ZoneMembership, ZoneRole
 from app.main import app
 
 
@@ -52,6 +55,35 @@ def test_protected_route_rejects_unknown_email(client_no_auth_override):
 def test_protected_route_accepts_valid_session_for_known_user(client_no_auth_override):
     client, SessionLocal = client_no_auth_override
     db = SessionLocal()
+    user = User(google_sub="sub-123", email="lise@example.com", name="Lise")
+    db.add(user)
+    db.flush()
+    zone = Zone(name="Lise sin sone", created_at=datetime.now(timezone.utc).replace(tzinfo=None))
+    db.add(zone)
+    db.flush()
+    db.add(
+        ZoneMembership(
+            zone_id=zone.id,
+            user_id=user.id,
+            role=ZoneRole.OWNER,
+            created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        )
+    )
+    db.commit()
+    zone_id = zone.id
+    db.close()
+
+    token = create_session_token("lise@example.com")
+    client.cookies.set(SESSION_COOKIE_NAME, token)
+    resp = client.post(
+        "/api/school-years", json={"label": "2025/2026"}, headers={"X-Zone-Id": str(zone_id)}
+    )
+    assert resp.status_code == 201
+
+
+def test_protected_route_rejects_missing_zone_header(client_no_auth_override):
+    client, SessionLocal = client_no_auth_override
+    db = SessionLocal()
     db.add(User(google_sub="sub-123", email="lise@example.com", name="Lise"))
     db.commit()
     db.close()
@@ -59,7 +91,7 @@ def test_protected_route_accepts_valid_session_for_known_user(client_no_auth_ove
     token = create_session_token("lise@example.com")
     client.cookies.set(SESSION_COOKIE_NAME, token)
     resp = client.post("/api/school-years", json={"label": "2025/2026"})
-    assert resp.status_code == 201
+    assert resp.status_code == 400
 
 
 def test_health_endpoint_does_not_require_auth(client_no_auth_override):
