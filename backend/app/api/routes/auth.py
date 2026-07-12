@@ -1,3 +1,4 @@
+from authlib.integrations.base_client.errors import OAuthError
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
@@ -22,7 +23,15 @@ async def login(request: Request):
 
 @router.get("/callback", name="auth_callback")
 async def auth_callback(request: Request, db: Session = Depends(get_db)):
-    token = await oauth.google.authorize_access_token(request)
+    try:
+        token = await oauth.google.authorize_access_token(request)
+    except OAuthError:
+        # The authorization code is single-use and short-lived. Reloading
+        # this exact URL (e.g. a browser "request desktop site" refresh, a
+        # duplicate tab, or navigating back/forward through history) resends
+        # an already-consumed or expired code, which Google rejects -- bounce
+        # back to login instead of leaking a raw 500.
+        return RedirectResponse(url=settings.frontend_url)
     userinfo = token.get("userinfo")
     if userinfo is None or not userinfo.get("email"):
         raise HTTPException(400, "Google did not return an email address")
