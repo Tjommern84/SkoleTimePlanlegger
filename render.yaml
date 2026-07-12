@@ -20,9 +20,13 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_SECRET
         sync: false
-      # Comma-separated, e.g. lise@example.com,colleague@example.com
-      - key: ALLOWED_EMAILS
-        sync: false
+      # Deliberately not set: the login allowlist was replaced by
+      # multi-tenant "zones" (any Google account can log in; access is
+      # per-zone, granted via invitation). Do NOT set this on a fresh
+      # database -- app/db/migrations/versions/a3f9c1d02b4e reads it only
+      # to backfill zone ownership for *pre-existing* data, and expects a
+      # matching users row to already exist. On an empty prod DB that row
+      # can't exist yet, so setting this would crash the migration.
       - key: SESSION_SECRET
         generateValue: true
       # This service's own public URL + /auth/callback -- must exactly
