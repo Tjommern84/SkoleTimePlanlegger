@@ -4,7 +4,18 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.exc import IntegrityError
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.api.routes import activities, auth, export, school_years, solve, solver_settings, subjects, teachers, zones
+from app.api.routes import (
+    activities,
+    auth,
+    export,
+    import_,
+    school_years,
+    solve,
+    solver_settings,
+    subjects,
+    teachers,
+    zones,
+)
 from app.config import settings
 
 app = FastAPI(title="Timetable Generator API")
@@ -53,6 +64,7 @@ app.include_router(solver_settings.router)
 app.include_router(solve.router)
 app.include_router(export.router)
 app.include_router(zones.router)
+app.include_router(import_.router)
 
 
 @app.get("/api/health")

@@ -6,21 +6,16 @@ from app.api.deps import get_current_user, get_db, zone_membership_for_school_ye
 from app.db.models.activity import Activity, ActivityLeg, ActivityLegTeacher, ActivityType
 from app.db.models.school_year import SchoolYear
 from app.db.models.user import User
+from app.domain.activity_rules import leg_count_error
 from app.schemas.activity import ActivityCreate, ActivityRead
 
 router = APIRouter(prefix="/api", tags=["activities"])
 
-_EXPECTED_LEG_COUNT = {ActivityType.NORMAL: 1, ActivityType.SPLIT_PARALLEL: 2}
-
 
 def _validate_leg_count(activity_type: ActivityType, leg_count: int) -> None:
-    expected = _EXPECTED_LEG_COUNT.get(activity_type)
-    if expected is not None and leg_count != expected:
-        raise HTTPException(
-            400, f"{activity_type.value} activities must have exactly {expected} leg(s), got {leg_count}"
-        )
-    if activity_type == ActivityType.TRINNFAG and leg_count < 1:
-        raise HTTPException(400, "TRINNFAG activities must have at least 1 leg")
+    error = leg_count_error(activity_type, leg_count)
+    if error is not None:
+        raise HTTPException(400, error)
 
 
 def _to_read(obj: Activity) -> ActivityRead:

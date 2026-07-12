@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bell, ChevronDown, Plus, Sparkles, Users } from "lucide-react";
+import { Bell, ChevronDown, Plus, Sparkles, Upload, Users } from "lucide-react";
 import { API_BASE_URL, type ZoneSummary } from "../../api/client";
 import { Badge } from "../ui/Badge";
 import { TeacherAvatar } from "../teachers/TeacherAvatar";
@@ -20,6 +20,7 @@ interface TopbarProps {
   activeZoneId: number;
   onZoneChange: (id: number) => void;
   onCreateSchoolYear: () => void;
+  onImportSchoolYear: () => void;
 }
 
 export function Topbar({
@@ -35,6 +36,7 @@ export function Topbar({
   activeZoneId,
   onZoneChange,
   onCreateSchoolYear,
+  onImportSchoolYear,
 }: TopbarProps) {
   const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
   const isOwner = zones.find((z) => z.id === activeZoneId)?.role === "owner";
@@ -64,6 +66,15 @@ export function Topbar({
           title="Nytt skoleår"
         >
           <Plus className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          onClick={onImportSchoolYear}
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-border bg-surface text-ink-muted hover:bg-bg-soft"
+          aria-label="Importer skoleår fra fil"
+          title="Importer skoleår fra fil"
+        >
+          <Upload className="h-4 w-4" />
         </button>
         {zones.length > 1 && (
           <ZoneSwitcher zones={zones} activeZoneId={activeZoneId} onChange={onZoneChange} />

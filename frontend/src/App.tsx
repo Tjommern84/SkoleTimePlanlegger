@@ -23,6 +23,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { Sidebar, type NavKey } from "./components/layout/Sidebar";
 import { Topbar } from "./components/layout/Topbar";
 import { CreateSchoolYearModal } from "./components/schoolyear/CreateSchoolYearModal";
+import { ImportSchoolModal } from "./components/schoolyear/ImportSchoolModal";
 import type { Tone } from "./components/ui/tone";
 
 interface DashboardProps {
@@ -37,6 +38,7 @@ function Dashboard({ zones, activeZoneId, onZoneChange }: DashboardProps) {
   const schoolYears = useSchoolYears();
   const [schoolYearId, setSchoolYearId] = useState<number | null>(null);
   const [creatingSchoolYear, setCreatingSchoolYear] = useState(false);
+  const [importingSchoolYear, setImportingSchoolYear] = useState(false);
 
   const years = schoolYears.data ?? [];
   if (schoolYearId === null && years.length > 0) {
@@ -111,19 +113,29 @@ function Dashboard({ zones, activeZoneId, onZoneChange }: DashboardProps) {
           activeZoneId={activeZoneId}
           onZoneChange={onZoneChange}
           onCreateSchoolYear={() => setCreatingSchoolYear(true)}
+          onImportSchoolYear={() => setImportingSchoolYear(true)}
         />
       }
     >
       {schoolYearId === null ? (
         <div className="flex flex-col items-center gap-3 py-16 text-center">
           <p className="text-sm text-ink-muted">Ingen skoleår funnet ennå.</p>
-          <button
-            type="button"
-            onClick={() => setCreatingSchoolYear(true)}
-            className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
-          >
-            Opprett skoleår
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setCreatingSchoolYear(true)}
+              className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-dark"
+            >
+              Opprett skoleår
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportingSchoolYear(true)}
+              className="rounded-full border border-border px-4 py-2 text-sm font-medium text-ink-muted hover:bg-bg-soft"
+            >
+              Importer fra fil
+            </button>
+          </div>
         </div>
       ) : (
         <>
@@ -153,6 +165,15 @@ function Dashboard({ zones, activeZoneId, onZoneChange }: DashboardProps) {
           onCreated={(id) => {
             setSchoolYearId(id);
             setCreatingSchoolYear(false);
+          }}
+        />
+      )}
+      {importingSchoolYear && (
+        <ImportSchoolModal
+          onClose={() => setImportingSchoolYear(false)}
+          onImported={(id) => {
+            setSchoolYearId(id);
+            setImportingSchoolYear(false);
           }}
         />
       )}

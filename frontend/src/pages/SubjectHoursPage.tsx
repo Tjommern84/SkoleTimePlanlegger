@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { api, type Subject } from "../api/client";
@@ -30,6 +30,16 @@ function HourCell({
   const [value, setValue] = useState(weeklyHours != null ? String(weeklyHours) : "");
   const createAllocation = useCreateSubjectHourAllocation();
   const updateAllocation = useUpdateSubjectHourAllocation();
+
+  // HourCell mounts as soon as the subjects list loads, which is normally
+  // before the separate hour-allocations query resolves -- so the
+  // useState initializer above almost always captures weeklyHours as
+  // undefined on first mount. Sync from the prop whenever the real value
+  // arrives (or changes after a save); harmless to re-run after a save
+  // since the prop will already match what was just typed.
+  useEffect(() => {
+    setValue(weeklyHours != null ? String(weeklyHours) : "");
+  }, [weeklyHours]);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["subjectHourTable", schoolYearId] });
 

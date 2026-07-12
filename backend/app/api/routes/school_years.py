@@ -20,6 +20,7 @@ from app.schemas.school import (
     TrinnRead,
 )
 from app.db.models.trinn_class import ClassGroup
+from app.services.school_structure import create_class_with_whole_group
 
 router = APIRouter(prefix="/api", tags=["school-structure"])
 
@@ -190,13 +191,7 @@ def list_classes(trinn_id: int, db: Session = Depends(get_db), user: User = Depe
 @router.post("/classes", response_model=SchoolClassRead, status_code=201)
 def create_class(payload: SchoolClassCreate, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     _zone_membership_for_trinn(db, user, payload.trinn_id)
-    obj = SchoolClass(**payload.model_dump())
-    db.add(obj)
-    db.flush()
-    # Every class needs at least a "whole" class-group to be usable by
-    # activities -- create it automatically so the user doesn't have to
-    # separately manage this for the common (non-split) case.
-    db.add(ClassGroup(school_class_id=obj.id, label="whole"))
+    obj, _ = create_class_with_whole_group(db, payload.trinn_id, payload.name)
     db.commit()
     db.refresh(obj)
     return obj

@@ -18,3 +18,7 @@ frontend/.env.local
 
 # Generated Excel exports (test/manual downloads, not source)
 timeplaner/
+
+# School-import JSON files contain real teacher/class names -- see
+# .claude/skills/school-import/
+imports/
