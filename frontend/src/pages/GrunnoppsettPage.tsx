@@ -73,13 +73,15 @@ function SchoolYearSettings({ schoolYearId }: { schoolYearId: number }) {
         <button
           type="button"
           onClick={() => {
-            const label = year?.label ?? "dette skoleåret";
+            const currentLabel = year?.label ?? "dette skoleåret";
             if (
               window.confirm(
-                `Slette "${label}"? Dette sletter ALT under dette skoleåret permanent — trinn, klasser, fag, aktiviteter, perioder og genererte timeplaner. Kan ikke angres.`,
+                `Slette "${currentLabel}"? Dette sletter ALT under dette skoleåret permanent — trinn, klasser, fag, aktiviteter, perioder og genererte timeplaner. Kan ikke angres.`,
               )
             ) {
-              deleteSchoolYear.mutate(schoolYearId);
+              deleteSchoolYear.mutate(schoolYearId, {
+                onSuccess: () => window.alert(`"${currentLabel}" er slettet.`),
+              });
             }
           }}
           className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger-soft"
