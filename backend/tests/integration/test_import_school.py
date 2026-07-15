@@ -179,6 +179,12 @@ def test_full_import_happy_path(client):
     assert solve_resp.status_code == 200
     assert solve_resp.json()["status"] != "INFEASIBLE"
 
+    # A SolverSettings row must exist for every imported school year --
+    # without one, the 10th-trinn Fremmedspraak fixed-Wednesday hard rule
+    # silently no-ops (see solve_service._resolve_fixed_placements).
+    settings_resp = client.get("/api/solver-settings", params={"school_year_id": school_year_id})
+    assert settings_resp.status_code == 200
+
 
 def test_import_reuses_existing_teacher_across_two_imports_same_zone(client):
     first = _valid_payload("2030/2031")
@@ -231,6 +237,61 @@ def test_import_warns_when_consecutive_periods_subject_is_split_across_activitie
     assert resp.status_code == 201
     warnings = resp.json()["warnings"]
     assert any("sammenhengende perioder" in w["message"] and "9B" in w["message"] for w in warnings)
+
+
+def test_import_creates_solver_settings_so_10th_trinn_sprak_gets_fixed_wednesday_placement(client):
+    # Needs real periods 5+6 (the default fremmedspraak10_fixed_periods) --
+    # _PERIODS above only goes up to period 4, so build a fuller week here.
+    full_week_periods = [
+        {
+            "day_of_week": day,
+            "period_number": n,
+            "start_time": f"{7 + n:02d}:00:00",
+            "end_time": f"{8 + n:02d}:00:00",
+            "is_splittable": False,
+            "is_before_lunch": n <= 4,
+        }
+        for day in ("MON", "TUE", "WED", "THU", "FRI")
+        for n in range(1, 7)
+    ]
+    payload = {
+        "school_year_label": "2033/2034",
+        "periods": full_week_periods,
+        "trinn": [{"level": 10, "classes": [{"name": "10A"}]}],
+        "teachers": [{"initials": "AB", "full_name": "A B"}],
+        "subjects": [
+            {
+                "short_code": "SPRAK",
+                "name": "Fremmedspraak",
+                "is_trinnfag": True,
+                "uses_hall": False,
+                "hour_allocations": [{"trinn_level": 10, "weekly_hours": 2}],
+            },
+        ],
+        "activities": [
+            {
+                "activity_type": "TRINNFAG",
+                "duration_minutes": 120,
+                "occurrences_per_week": 1,
+                "notes": "10. trinn fremmedspraak",
+                "legs": [{"class_ref": "10A", "subject_code": "SPRAK", "teacher_initials": ["AB"]}],
+            },
+        ],
+    }
+    resp = client.post("/api/import/school", json=payload)
+    assert resp.status_code == 201, resp.json()
+    school_year_id = resp.json()["school_year_id"]
+
+    settings = client.get("/api/solver-settings", params={"school_year_id": school_year_id}).json()
+    assert settings["fremmedspraak10_fixed_day"] == "WED"
+    assert settings["fremmedspraak10_fixed_periods"] == "5,6"
+
+    solve_resp = client.post("/api/solve", json={"school_year_id": school_year_id, "time_limit_seconds": 10})
+    assert solve_resp.json()["status"] != "INFEASIBLE"
+
+    active = client.get(f"/api/school-years/{school_year_id}/timetable/active").json()
+    assert len(active["slots"]) == 1
+    assert active["slots"][0]["day_of_week"] == "WED"
 
 
 def test_import_odd_duration_ticks_is_warning_not_error(client):

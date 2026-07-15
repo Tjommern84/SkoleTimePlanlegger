@@ -6,6 +6,7 @@ from app.api.deps import get_db, require_zone_header
 from app.db.models.activity import Activity, ActivityLeg, ActivityLegTeacher, ActivityType
 from app.db.models.period import PeriodDefinition
 from app.db.models.school_year import SchoolYear
+from app.db.models.solver_settings import SolverSettings
 from app.db.models.subject import Subject, SubjectHourAllocation
 from app.db.models.teacher import Teacher
 from app.db.models.trinn_class import ClassGroup, Trinn
@@ -192,6 +193,13 @@ def import_school(
     school_year = SchoolYear(zone_id=membership.zone_id, label=payload.school_year_label)
     db.add(school_year)
     db.flush()
+
+    # Without this row, SolverSettingsData falls back to hardcoded defaults
+    # for soft-preference weights (harmless), but the 10th-trinn
+    # Fremmedspraak fixed-Wednesday-placement HARD rule silently no-ops
+    # instead (see solve_service._resolve_fixed_placements) -- every
+    # imported school year needs one, matching seed_school_example_data.
+    db.add(SolverSettings(school_year_id=school_year.id))
 
     for p in payload.periods:
         db.add(PeriodDefinition(school_year_id=school_year.id, **p.model_dump()))
