@@ -20,6 +20,8 @@ class Subject(Base):
     avoid_consecutive: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     prefer_before_lunch: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     needs_consecutive_periods: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    prefer_early_periods: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    avoid_friday_afternoon: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
 
 class SubjectHourAllocation(Base):

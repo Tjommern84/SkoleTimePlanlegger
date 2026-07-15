@@ -12,6 +12,8 @@ class SolverSettingsUpsert(BaseModel):
     weight_matte_before_lunch: int = 10
     weight_mat_helse_placement: int = 10
     weight_krov_prefer_one: int = 5
+    weight_prefer_early_periods: int = 10
+    weight_avoid_friday_afternoon: int = 10
 
 
 class SolverSettingsRead(SolverSettingsUpsert):

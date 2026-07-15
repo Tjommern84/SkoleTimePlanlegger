@@ -8,6 +8,9 @@ Soft preferences implemented (see docs/domain-notes.md):
 - Musikk: avoid two ordinally-consecutive periods for the same class.
 - Matematikk: prefer before lunch.
 - Mat&Helse: prefer starting at period 2 (so it lands in periods 2-3-4).
+- Subject.prefer_early_periods: prefer periods 1-2 (e.g. Valgfag).
+- Subject.avoid_friday_afternoon: prefer not landing after the Friday
+  lunch boundary (e.g. Fremmedspraak/Sprak).
 
 Consecutive-period adjacency is ordinal (period N and N+1 count as
 consecutive even across the lunch gap), matching the hard-constraint rules
@@ -16,6 +19,7 @@ elsewhere in the solver.
 
 from ortools.sat.python import cp_model
 
+from app.db.models.period import DayOfWeek
 from app.solver.grid import TickGrid
 from app.solver.model_builder import BuiltModel
 from app.solver.types import SessionInstance, SolverSettingsData, SubjectData
@@ -38,6 +42,8 @@ def add_soft_objective(
     krov10_penalty_vars: list[cp_model.IntVar] = []
     matte_penalty_vars: list[cp_model.IntVar] = []
     mat_helse_penalty_vars: list[cp_model.IntVar] = []
+    early_periods_penalty_vars: list[cp_model.IntVar] = []
+    friday_afternoon_penalty_vars: list[cp_model.IntVar] = []
     musikk_class_tick_vars: dict[tuple[int, int], list[cp_model.IntVar]] = {}
 
     for session in sessions:
@@ -73,6 +79,14 @@ def add_soft_objective(
                 # docs/domain-notes.md.
                 if subject.short_code == "MH" and period_number != 2:
                     mat_helse_penalty_vars.append(var)
+
+                if subject.prefer_early_periods and period_number not in (1, 2):
+                    early_periods_penalty_vars.append(var)
+
+                if subject.avoid_friday_afternoon and day == DayOfWeek.FRI:
+                    boundary = grid.lunch_boundary.get(day)
+                    if boundary is not None and s >= boundary:
+                        friday_afternoon_penalty_vars.append(var)
 
     krov_overflow_vars: list[cp_model.IntVar] = []
     for t, tick_vars in krov_tick_vars.items():
@@ -110,6 +124,8 @@ def add_soft_objective(
     objective_terms += [(settings.weight_musikk_spread, v) for v in musikk_consecutive_vars]
     objective_terms += [(settings.weight_matte_before_lunch, v) for v in matte_penalty_vars]
     objective_terms += [(settings.weight_mat_helse_placement, v) for v in mat_helse_penalty_vars]
+    objective_terms += [(settings.weight_prefer_early_periods, v) for v in early_periods_penalty_vars]
+    objective_terms += [(settings.weight_avoid_friday_afternoon, v) for v in friday_afternoon_penalty_vars]
 
     if objective_terms:
         model.Minimize(sum(weight * var for weight, var in objective_terms))

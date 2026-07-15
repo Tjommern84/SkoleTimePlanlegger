@@ -640,6 +640,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/import/school": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Import School */
+        post: operations["import_school_api_import_school_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/health": {
         parameters: {
             query?: never;
@@ -675,6 +692,18 @@ export interface components {
             /** Legs */
             legs: components["schemas"]["ActivityLegCreate"][];
         };
+        /** ActivityImport */
+        ActivityImport: {
+            activity_type: components["schemas"]["ActivityType"];
+            /** Duration Minutes */
+            duration_minutes: number;
+            /** Occurrences Per Week */
+            occurrences_per_week: number;
+            /** Notes */
+            notes?: string | null;
+            /** Legs */
+            legs: components["schemas"]["ActivityLegImport"][];
+        };
         /** ActivityLegCreate */
         ActivityLegCreate: {
             /** Class Group Id */
@@ -686,6 +715,18 @@ export interface components {
              * @default []
              */
             teacher_ids: number[];
+        };
+        /** ActivityLegImport */
+        ActivityLegImport: {
+            /** Class Ref */
+            class_ref?: string | null;
+            /** Subject Code */
+            subject_code: string;
+            /**
+             * Teacher Initials
+             * @default []
+             */
+            teacher_initials: string[];
         };
         /** ActivityLegRead */
         ActivityLegRead: {
@@ -747,6 +788,16 @@ export interface components {
             /** Id */
             id: number;
         };
+        /** ClassImport */
+        ClassImport: {
+            /** Name */
+            name: string;
+            /**
+             * Extra Groups
+             * @default []
+             */
+            extra_groups: string[];
+        };
         /**
          * DayOfWeek
          * @enum {string}
@@ -779,6 +830,34 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** HourAllocationImport */
+        HourAllocationImport: {
+            /** Trinn Level */
+            trinn_level: number;
+            /** Weekly Hours */
+            weekly_hours: number;
+        };
+        /** ImportIssue */
+        ImportIssue: {
+            /** Path */
+            path: string;
+            /** Message */
+            message: string;
+        };
+        /** ImportResultRead */
+        ImportResultRead: {
+            /** School Year Id */
+            school_year_id: number;
+            /** Counts */
+            counts: {
+                [key: string]: number;
+            };
+            /**
+             * Warnings
+             * @default []
+             */
+            warnings: components["schemas"]["ImportIssue"][];
         };
         /** PeriodDefinitionCreate */
         PeriodDefinitionCreate: {
@@ -838,6 +917,32 @@ export interface components {
             /** Id */
             id: number;
         };
+        /** PeriodImport */
+        PeriodImport: {
+            day_of_week: components["schemas"]["DayOfWeek"];
+            /** Period Number */
+            period_number: number;
+            /**
+             * Start Time
+             * Format: time
+             */
+            start_time: string;
+            /**
+             * End Time
+             * Format: time
+             */
+            end_time: string;
+            /**
+             * Is Splittable
+             * @default false
+             */
+            is_splittable: boolean;
+            /**
+             * Is Before Lunch
+             * @default false
+             */
+            is_before_lunch: boolean;
+        };
         /** SchoolClassCreate */
         SchoolClassCreate: {
             /** Trinn Id */
@@ -853,6 +958,36 @@ export interface components {
             name: string;
             /** Id */
             id: number;
+        };
+        /** SchoolImport */
+        SchoolImport: {
+            /** School Year Label */
+            school_year_label: string;
+            /**
+             * Periods
+             * @default []
+             */
+            periods: components["schemas"]["PeriodImport"][];
+            /**
+             * Trinn
+             * @default []
+             */
+            trinn: components["schemas"]["TrinnImport"][];
+            /**
+             * Teachers
+             * @default []
+             */
+            teachers: components["schemas"]["TeacherImport"][];
+            /**
+             * Subjects
+             * @default []
+             */
+            subjects: components["schemas"]["SubjectImport"][];
+            /**
+             * Activities
+             * @default []
+             */
+            activities: components["schemas"]["ActivityImport"][];
         };
         /** SchoolYearCreate */
         SchoolYearCreate: {
@@ -951,6 +1086,16 @@ export interface components {
              * @default 5
              */
             weight_krov_prefer_one: number;
+            /**
+             * Weight Prefer Early Periods
+             * @default 10
+             */
+            weight_prefer_early_periods: number;
+            /**
+             * Weight Avoid Friday Afternoon
+             * @default 10
+             */
+            weight_avoid_friday_afternoon: number;
             /** Id */
             id: number;
         };
@@ -1003,6 +1148,16 @@ export interface components {
              * @default 5
              */
             weight_krov_prefer_one: number;
+            /**
+             * Weight Prefer Early Periods
+             * @default 10
+             */
+            weight_prefer_early_periods: number;
+            /**
+             * Weight Avoid Friday Afternoon
+             * @default 10
+             */
+            weight_avoid_friday_afternoon: number;
         };
         /** SubjectCreate */
         SubjectCreate: {
@@ -1042,6 +1197,16 @@ export interface components {
              * @default false
              */
             needs_consecutive_periods: boolean;
+            /**
+             * Prefer Early Periods
+             * @default false
+             */
+            prefer_early_periods: boolean;
+            /**
+             * Avoid Friday Afternoon
+             * @default false
+             */
+            avoid_friday_afternoon: boolean;
         };
         /** SubjectHourAllocationCreate */
         SubjectHourAllocationCreate: {
@@ -1062,6 +1227,58 @@ export interface components {
             weekly_hours: number;
             /** Id */
             id: number;
+        };
+        /** SubjectImport */
+        SubjectImport: {
+            /** Short Code */
+            short_code: string;
+            /** Name */
+            name: string;
+            /**
+             * Is Trinnfag
+             * @default false
+             */
+            is_trinnfag: boolean;
+            /**
+             * Is Krov
+             * @default false
+             */
+            is_krov: boolean;
+            /**
+             * Uses Hall
+             * @default false
+             */
+            uses_hall: boolean;
+            /**
+             * Avoid Consecutive
+             * @default false
+             */
+            avoid_consecutive: boolean;
+            /**
+             * Prefer Before Lunch
+             * @default false
+             */
+            prefer_before_lunch: boolean;
+            /**
+             * Needs Consecutive Periods
+             * @default false
+             */
+            needs_consecutive_periods: boolean;
+            /**
+             * Prefer Early Periods
+             * @default false
+             */
+            prefer_early_periods: boolean;
+            /**
+             * Avoid Friday Afternoon
+             * @default false
+             */
+            avoid_friday_afternoon: boolean;
+            /**
+             * Hour Allocations
+             * @default []
+             */
+            hour_allocations: components["schemas"]["HourAllocationImport"][];
         };
         /** SubjectRead */
         SubjectRead: {
@@ -1101,11 +1318,28 @@ export interface components {
              * @default false
              */
             needs_consecutive_periods: boolean;
+            /**
+             * Prefer Early Periods
+             * @default false
+             */
+            prefer_early_periods: boolean;
+            /**
+             * Avoid Friday Afternoon
+             * @default false
+             */
+            avoid_friday_afternoon: boolean;
             /** Id */
             id: number;
         };
         /** TeacherCreate */
         TeacherCreate: {
+            /** Initials */
+            initials: string;
+            /** Full Name */
+            full_name: string;
+        };
+        /** TeacherImport */
+        TeacherImport: {
             /** Initials */
             initials: string;
             /** Full Name */
@@ -1191,6 +1425,16 @@ export interface components {
             school_year_id: number;
             /** Level */
             level: number;
+        };
+        /** TrinnImport */
+        TrinnImport: {
+            /** Level */
+            level: number;
+            /**
+             * Classes
+             * @default []
+             */
+            classes: components["schemas"]["ClassImport"][];
         };
         /** TrinnRead */
         TrinnRead: {
@@ -3074,6 +3318,39 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_school_api_import_school_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SchoolImport"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportResultRead"];
+                };
             };
             /** @description Validation Error */
             422: {

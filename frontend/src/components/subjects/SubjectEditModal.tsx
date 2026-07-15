@@ -48,6 +48,18 @@ const FLAG_FIELDS: { key: keyof SubjectCreate; label: string; hint: string }[] =
     hint:
       "For praktiske fag som trenger 2 (eller flere) perioder rett etter hverandre for å gi mening, f.eks. mat og helse eller kunst og håndverk — en enkeltperiode holder ikke til å faktisk gjennomføre timen.",
   },
+  {
+    key: "prefer_early_periods",
+    label: "Bør ligge i periode 1-2",
+    hint:
+      "En myk preferanse for fag som helst bør legges tidlig på dagen, i periode 1 eller 2 spesifikt (strengere enn \"bør ligge før lunsj\"), f.eks. valgfag. Ikke et hardt krav.",
+  },
+  {
+    key: "avoid_friday_afternoon",
+    label: "Unngå fredag etter lunsj",
+    hint:
+      "En myk preferanse for fag som helst ikke bør ligge på fredag etter lunsjpausen, f.eks. fremmedspråk. Ikke et hardt krav.",
+  },
 ];
 
 const EMPTY: SubjectCreate = {
@@ -60,6 +72,8 @@ const EMPTY: SubjectCreate = {
   avoid_consecutive: false,
   prefer_before_lunch: false,
   needs_consecutive_periods: false,
+  prefer_early_periods: false,
+  avoid_friday_afternoon: false,
 };
 
 export function SubjectEditModal({ schoolYearId, subject, onClose }: SubjectEditModalProps) {

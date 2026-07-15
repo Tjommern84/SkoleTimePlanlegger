@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_db, require_zone_header
-from app.db.models.activity import Activity, ActivityLeg, ActivityLegTeacher
+from app.db.models.activity import Activity, ActivityLeg, ActivityLegTeacher, ActivityType
 from app.db.models.period import PeriodDefinition
 from app.db.models.school_year import SchoolYear
 from app.db.models.subject import Subject, SubjectHourAllocation
@@ -89,6 +89,9 @@ def import_school(
                 )
             seen_levels.add(alloc.trinn_level)
 
+    needs_consecutive_periods_subjects = {s.short_code for s in payload.subjects if s.needs_consecutive_periods}
+    consecutive_period_activity_count: dict[tuple[str, str], int] = {}
+
     for a_idx, activity in enumerate(payload.activities):
         path = f"activities[{a_idx}]"
         leg_error = leg_count_error(activity.activity_type, len(activity.legs))
@@ -128,6 +131,39 @@ def import_school(
                     errors.append(
                         ImportIssue(path=leg_path, message=f"Lærerinitialer '{initials}' finnes ikke i 'teachers'-listen.")
                     )
+
+            if (
+                activity.activity_type == ActivityType.NORMAL
+                and leg.class_ref is not None
+                and leg.subject_code in needs_consecutive_periods_subjects
+            ):
+                if activity.duration_minutes < 60:
+                    warnings.append(
+                        ImportIssue(
+                            path=leg_path,
+                            message=(
+                                f"Faget '{leg.subject_code}' er markert \"trenger sammenhengende perioder\", men "
+                                "denne aktiviteten er under 60 minutter -- kan ikke bli en sammenhengende dobbeltime "
+                                "alene."
+                            ),
+                        )
+                    )
+                key = (leg.class_ref, leg.subject_code)
+                consecutive_period_activity_count[key] = consecutive_period_activity_count.get(key, 0) + 1
+
+    for (class_ref, subject_code), count in consecutive_period_activity_count.items():
+        if count > 1:
+            warnings.append(
+                ImportIssue(
+                    path="activities",
+                    message=(
+                        f"Faget '{subject_code}' for '{class_ref}' er markert \"trenger sammenhengende perioder\", "
+                        f"men er delt over {count} separate aktiviteter i denne importen. Solveren behandler hver "
+                        "aktivitet uavhengig, så de kan havne på ulike dager/perioder -- vurder å slå dem sammen "
+                        "til én aktivitet med lengre varighet i stedet."
+                    ),
+                )
+            )
 
     # --- Phase 2: one DB-dependent pre-check --------------------------------
     existing_year = db.scalars(
@@ -212,6 +248,8 @@ def import_school(
             avoid_consecutive=s.avoid_consecutive,
             prefer_before_lunch=s.prefer_before_lunch,
             needs_consecutive_periods=s.needs_consecutive_periods,
+            prefer_early_periods=s.prefer_early_periods,
+            avoid_friday_afternoon=s.avoid_friday_afternoon,
         )
         db.add(subject)
         db.flush()

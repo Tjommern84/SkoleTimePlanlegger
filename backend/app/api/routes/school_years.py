@@ -1,10 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, require_zone_header, zone_membership_for_school_year
 from app.db.models import PeriodDefinition, SchoolClass, Trinn
+from app.db.models.activity import Activity, ActivityLeg, ActivityLegTeacher
 from app.db.models.school_year import SchoolYear
+from app.db.models.solver_settings import SolverSettings
+from app.db.models.subject import Subject, SubjectHourAllocation
+from app.db.models.teacher import TeacherSubjectQualification, TeacherUnavailability
+from app.db.models.timetable import GeneratedTimetable, TimetableSlot
+from app.db.models.trinn_class import ClassGroup
 from app.db.models.user import User
 from app.db.models.zone import ZoneMembership
 from app.schemas.school import (
@@ -87,7 +94,44 @@ def update_school_year(
 
 @router.delete("/school-years/{school_year_id}", status_code=204)
 def delete_school_year(school_year_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    """Deleting a school year always means "delete everything under it too"
+    -- unlike Trinn/SchoolClass deletes elsewhere in this file, there's no
+    legitimate case where a user wants to delete a school year but keep its
+    trinn/subjects/activities around (they'd just become orphaned). So this
+    cascades explicitly, in FK dependency order, rather than relying on the
+    restrict-by-default behavior used for structural entities.
+    """
     zone_membership_for_school_year(db, user, school_year_id)
+
+    subject_ids = db.scalars(select(Subject.id).where(Subject.school_year_id == school_year_id)).all()
+    trinn_ids = db.scalars(select(Trinn.id).where(Trinn.school_year_id == school_year_id)).all()
+    class_ids = db.scalars(select(SchoolClass.id).where(SchoolClass.trinn_id.in_(trinn_ids))).all()
+    class_group_ids = db.scalars(
+        select(ClassGroup.id).where(ClassGroup.school_class_id.in_(class_ids))
+    ).all()
+    activity_ids = db.scalars(select(Activity.id).where(Activity.school_year_id == school_year_id)).all()
+    activity_leg_ids = db.scalars(
+        select(ActivityLeg.id).where(ActivityLeg.activity_id.in_(activity_ids))
+    ).all()
+    generated_timetable_ids = db.scalars(
+        select(GeneratedTimetable.id).where(GeneratedTimetable.school_year_id == school_year_id)
+    ).all()
+
+    db.execute(delete(TimetableSlot).where(TimetableSlot.generated_timetable_id.in_(generated_timetable_ids)))
+    db.execute(delete(GeneratedTimetable).where(GeneratedTimetable.id.in_(generated_timetable_ids)))
+    db.execute(delete(ActivityLegTeacher).where(ActivityLegTeacher.activity_leg_id.in_(activity_leg_ids)))
+    db.execute(delete(ActivityLeg).where(ActivityLeg.id.in_(activity_leg_ids)))
+    db.execute(delete(Activity).where(Activity.id.in_(activity_ids)))
+    db.execute(delete(TeacherSubjectQualification).where(TeacherSubjectQualification.subject_id.in_(subject_ids)))
+    db.execute(delete(SubjectHourAllocation).where(SubjectHourAllocation.subject_id.in_(subject_ids)))
+    db.execute(delete(Subject).where(Subject.id.in_(subject_ids)))
+    db.execute(delete(ClassGroup).where(ClassGroup.id.in_(class_group_ids)))
+    db.execute(delete(SchoolClass).where(SchoolClass.id.in_(class_ids)))
+    db.execute(delete(Trinn).where(Trinn.id.in_(trinn_ids)))
+    db.execute(delete(PeriodDefinition).where(PeriodDefinition.school_year_id == school_year_id))
+    db.execute(delete(TeacherUnavailability).where(TeacherUnavailability.school_year_id == school_year_id))
+    db.execute(delete(SolverSettings).where(SolverSettings.school_year_id == school_year_id))
+
     obj = db.get(SchoolYear, school_year_id)
     db.delete(obj)
     db.commit()
@@ -107,7 +151,11 @@ def create_period(
     zone_membership_for_school_year(db, user, payload.school_year_id)
     obj = PeriodDefinition(**payload.model_dump())
     db.add(obj)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, f"Periode {payload.period_number} finnes allerede på denne dagen.")
     db.refresh(obj)
     return obj
 
@@ -126,7 +174,11 @@ def update_period(
     zone_membership_for_school_year(db, user, payload.school_year_id)
     for key, value in payload.model_dump().items():
         setattr(obj, key, value)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, f"Periode {payload.period_number} finnes allerede på denne dagen.")
     db.refresh(obj)
     return obj
 

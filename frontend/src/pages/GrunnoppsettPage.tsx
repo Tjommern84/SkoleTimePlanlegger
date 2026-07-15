@@ -72,7 +72,16 @@ function SchoolYearSettings({ schoolYearId }: { schoolYearId: number }) {
         </div>
         <button
           type="button"
-          onClick={() => deleteSchoolYear.mutate(schoolYearId)}
+          onClick={() => {
+            const label = year?.label ?? "dette skoleåret";
+            if (
+              window.confirm(
+                `Slette "${label}"? Dette sletter ALT under dette skoleåret permanent — trinn, klasser, fag, aktiviteter, perioder og genererte timeplaner. Kan ikke angres.`,
+              )
+            ) {
+              deleteSchoolYear.mutate(schoolYearId);
+            }
+          }}
           className="flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-sm font-medium text-danger hover:bg-danger-soft"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -497,6 +506,9 @@ function PeriodsSection({ schoolYearId }: { schoolYearId: number }) {
           Legg til periode
         </button>
       </div>
+      <ErrorText error={createPeriod.error} />
+      <ErrorText error={updatePeriod.error} />
+      <ErrorText error={deletePeriod.error} />
     </Card>
   );
 }

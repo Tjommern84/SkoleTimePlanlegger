@@ -91,6 +91,8 @@ def _load_subjects(db: Session, school_year_id: int) -> dict[int, SubjectData]:
             avoid_consecutive=s.avoid_consecutive,
             prefer_before_lunch=s.prefer_before_lunch,
             needs_consecutive_periods=s.needs_consecutive_periods,
+            prefer_early_periods=s.prefer_early_periods,
+            avoid_friday_afternoon=s.avoid_friday_afternoon,
         )
         for s in subjects
     }
@@ -228,6 +230,8 @@ def _load_solver_settings_data(db: Session, school_year_id: int) -> SolverSettin
             weight_matte_before_lunch=10,
             weight_mat_helse_placement=10,
             weight_krov_prefer_one=5,
+            weight_prefer_early_periods=10,
+            weight_avoid_friday_afternoon=10,
         )
     return SolverSettingsData(
         max_concurrent_krov=settings.max_concurrent_krov,
@@ -239,6 +243,8 @@ def _load_solver_settings_data(db: Session, school_year_id: int) -> SolverSettin
         weight_matte_before_lunch=settings.weight_matte_before_lunch,
         weight_mat_helse_placement=settings.weight_mat_helse_placement,
         weight_krov_prefer_one=settings.weight_krov_prefer_one,
+        weight_prefer_early_periods=settings.weight_prefer_early_periods,
+        weight_avoid_friday_afternoon=settings.weight_avoid_friday_afternoon,
     )
 
 

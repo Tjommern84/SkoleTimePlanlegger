@@ -22,3 +22,8 @@ timeplaner/
 # School-import JSON files contain real teacher/class names -- see
 # .claude/skills/school-import/
 imports/
+
+# Raw source spreadsheets/dumps used to build a school-import JSON also
+# contain real teacher initials/names -- same reasoning as imports/ above.
+docs/*.xlsx
+docs/timefordeling_dump.txt

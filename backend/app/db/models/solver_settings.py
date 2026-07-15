@@ -26,3 +26,5 @@ class SolverSettings(Base):
     weight_matte_before_lunch: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     weight_mat_helse_placement: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
     weight_krov_prefer_one: Mapped[int] = mapped_column(Integer, default=5, nullable=False)
+    weight_prefer_early_periods: Mapped[int] = mapped_column(Integer, default=10, nullable=False)
+    weight_avoid_friday_afternoon: Mapped[int] = mapped_column(Integer, default=10, nullable=False)

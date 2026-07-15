@@ -68,17 +68,44 @@ def client():
     app.dependency_overrides.clear()
 
 
-def test_school_year_update_and_restrict_delete(client):
+def test_school_year_update_and_cascade_delete(client):
     year = client.post("/api/school-years", json={"label": "2025/2026"}).json()
 
     resp = client.patch(f"/api/school-years/{year['id']}", json={"label": "2026/2027"})
     assert resp.status_code == 200
     assert resp.json()["label"] == "2026/2027"
 
-    client.post("/api/trinn", json={"school_year_id": year["id"], "level": 8})
+    trinn = client.post("/api/trinn", json={"school_year_id": year["id"], "level": 8}).json()
+    school_class = client.post("/api/classes", json={"trinn_id": trinn["id"], "name": "8A"}).json()
+    subject = client.post(
+        "/api/subjects", json={"school_year_id": year["id"], "name": "Norsk", "short_code": "NO"}
+    ).json()
+    group = client.get("/api/class-groups", params={"school_class_id": school_class["id"]}).json()[0]
+    client.post(
+        "/api/activities",
+        json={
+            "school_year_id": year["id"],
+            "activity_type": "NORMAL",
+            "duration_ticks": 2,
+            "occurrences_per_week": 1,
+            "legs": [{"class_group_id": group["id"], "subject_id": subject["id"], "teacher_ids": []}],
+        },
+    )
 
+    # A school year with real data underneath it must still be fully
+    # deletable in one action -- unlike Trinn/Class (see the restrict
+    # tests below), there's no legitimate reason to keep orphaned trinn/
+    # subjects/activities around once their school year is gone.
     resp = client.delete(f"/api/school-years/{year['id']}")
-    assert resp.status_code == 409
+    assert resp.status_code == 204
+
+    # The school year itself (and therefore everything scoped to it) is
+    # gone -- these routes 404 via the zone-membership lookup rather than
+    # returning empty lists, since the parent school year no longer exists.
+    assert client.get(f"/api/trinn?school_year_id={year['id']}").status_code == 404
+    assert client.get(f"/api/subjects?school_year_id={year['id']}").status_code == 404
+    assert client.get(f"/api/activities?school_year_id={year['id']}").status_code == 404
+    assert year["id"] not in [y["id"] for y in client.get("/api/school-years").json()]
 
 
 def test_trinn_update_and_restrict_delete(client):
@@ -176,6 +203,24 @@ def test_period_update_and_delete(client):
 
     resp = client.delete(f"/api/periods/{period['id']}")
     assert resp.status_code == 204
+
+
+def test_duplicate_period_returns_409_not_500(client):
+    year = client.post("/api/school-years", json={"label": "2025/2026"}).json()
+    payload = {
+        "school_year_id": year["id"],
+        "day_of_week": "MON",
+        "period_number": 1,
+        "start_time": "08:30:00",
+        "end_time": "09:30:00",
+        "is_splittable": False,
+        "is_before_lunch": True,
+    }
+    resp = client.post("/api/periods", json=payload)
+    assert resp.status_code == 201
+
+    resp = client.post("/api/periods", json=payload)
+    assert resp.status_code == 409
 
 
 def test_subject_update_and_delete_cascades_hour_allocations(client):

@@ -43,6 +43,8 @@ def _subject(id_, **kwargs):
         avoid_consecutive=False,
         prefer_before_lunch=False,
         needs_consecutive_periods=False,
+        prefer_early_periods=False,
+        avoid_friday_afternoon=False,
     )
     defaults.update(kwargs)
     return SubjectData(id=id_, **defaults)

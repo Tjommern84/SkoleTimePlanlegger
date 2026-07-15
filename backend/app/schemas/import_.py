@@ -61,6 +61,8 @@ class SubjectImport(BaseModel):
     avoid_consecutive: bool = False
     prefer_before_lunch: bool = False
     needs_consecutive_periods: bool = False
+    prefer_early_periods: bool = False
+    avoid_friday_afternoon: bool = False
     hour_allocations: list[HourAllocationImport] = []
 
 

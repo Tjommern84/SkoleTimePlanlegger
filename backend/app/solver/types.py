@@ -52,6 +52,8 @@ class SubjectData:
     avoid_consecutive: bool
     prefer_before_lunch: bool
     needs_consecutive_periods: bool
+    prefer_early_periods: bool
+    avoid_friday_afternoon: bool
 
 
 @dataclass(frozen=True)
@@ -71,3 +73,5 @@ class SolverSettingsData:
     weight_matte_before_lunch: int
     weight_mat_helse_placement: int
     weight_krov_prefer_one: int
+    weight_prefer_early_periods: int
+    weight_avoid_friday_afternoon: int

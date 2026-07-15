@@ -40,6 +40,8 @@ def _settings(**overrides):
         weight_matte_before_lunch=10,
         weight_mat_helse_placement=10,
         weight_krov_prefer_one=5,
+        weight_prefer_early_periods=10,
+        weight_avoid_friday_afternoon=10,
     )
     defaults.update(overrides)
     return SolverSettingsData(**defaults)
@@ -49,6 +51,7 @@ def _subject(id_, **kwargs):
     defaults = dict(
         short_code=f"S{id_}", is_krov=False, uses_hall=False, is_trinnfag=False,
         avoid_consecutive=False, prefer_before_lunch=False, needs_consecutive_periods=False,
+        prefer_early_periods=False, avoid_friday_afternoon=False,
     )
     defaults.update(kwargs)
     return SubjectData(id=id_, **defaults)
@@ -131,3 +134,27 @@ def test_krov_prefers_only_one_concurrent_session():
     ]
     _, assigned = _optimize(grid, sessions, {1: krov}, _settings())
     assert assigned("k1") != assigned("k2")
+
+
+def test_prefer_early_periods_pushes_session_to_period_1_or_2():
+    grid = _grid()
+    valg = _subject(1, prefer_early_periods=True)
+    sessions = [
+        SessionInstance(key="valg", activity_id=1, occurrence_index=0, duration_ticks=2,
+                         legs=(LegData(class_group_id=100, subject_id=1, teacher_ids=(1,)),)),
+    ]
+    _, assigned = _optimize(grid, sessions, {1: valg}, _settings())
+    start = assigned("valg")
+    assert grid.ticks[start].period_number in (1, 2)
+
+
+def test_avoid_friday_afternoon_pushes_session_before_lunch_when_both_are_free():
+    grid = _grid(days=(DayOfWeek.FRI,))
+    sprak = _subject(1, avoid_friday_afternoon=True)
+    sessions = [
+        SessionInstance(key="sprak", activity_id=1, occurrence_index=0, duration_ticks=2,
+                         legs=(LegData(class_group_id=100, subject_id=1, teacher_ids=(1,)),)),
+    ]
+    _, assigned = _optimize(grid, sessions, {1: sprak}, _settings())
+    lunch = grid.lunch_boundary[DayOfWeek.FRI]
+    assert assigned("sprak") < lunch

@@ -206,6 +206,33 @@ def test_import_reuses_existing_teacher_across_two_imports_same_zone(client):
     assert ab_rows[0]["full_name"] == "A B"  # kept the original, not overwritten
 
 
+def test_import_warns_when_consecutive_periods_subject_is_split_across_activities(client):
+    payload = _valid_payload("2032/2033")
+    payload["subjects"][1]["needs_consecutive_periods"] = True  # MH
+    payload["activities"].append(
+        {
+            "activity_type": "NORMAL",
+            "duration_minutes": 60,
+            "occurrences_per_week": 1,
+            "notes": "9B Mat og helse solo",
+            "legs": [{"class_ref": "9B", "subject_code": "MH", "teacher_initials": ["CD"]}],
+        }
+    )
+    payload["activities"].append(
+        {
+            "activity_type": "NORMAL",
+            "duration_minutes": 60,
+            "occurrences_per_week": 1,
+            "notes": "9B Mat og helse solo 2",
+            "legs": [{"class_ref": "9B", "subject_code": "MH", "teacher_initials": ["CD"]}],
+        }
+    )
+    resp = client.post("/api/import/school", json=payload)
+    assert resp.status_code == 201
+    warnings = resp.json()["warnings"]
+    assert any("sammenhengende perioder" in w["message"] and "9B" in w["message"] for w in warnings)
+
+
 def test_import_odd_duration_ticks_is_warning_not_error(client):
     payload = _valid_payload()
     payload["activities"][0]["duration_minutes"] = 90
