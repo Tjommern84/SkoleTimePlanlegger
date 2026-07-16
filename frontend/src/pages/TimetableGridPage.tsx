@@ -26,12 +26,13 @@ interface Lesson {
   label: string; // teacher initials (class view) or class name (teacher view)
 }
 
-type ViewMode = "class" | "teacher" | "room";
+type ViewMode = "class" | "teacher" | "subject" | "room";
 
 export function TimetableGridPage({ schoolYearId }: { schoolYearId: number }) {
   const [viewMode, setViewMode] = useState<ViewMode>("class");
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState<number | null>(null);
 
   const trinn = useQuery({ queryKey: ["trinn", schoolYearId], queryFn: () => api.trinn.list(schoolYearId) });
   const classesQuery = useQuery({
@@ -68,6 +69,9 @@ export function TimetableGridPage({ schoolYearId }: { schoolYearId: number }) {
   }
   if (selectedTeacherId === null && (teachers.data?.length ?? 0) > 0) {
     setSelectedTeacherId(teachers.data![0].id);
+  }
+  if (selectedSubjectId === null && (subjects.data?.length ?? 0) > 0) {
+    setSelectedSubjectId(subjects.data![0].id);
   }
 
   const maxPeriodByDay = useMemo(() => {
@@ -119,7 +123,9 @@ export function TimetableGridPage({ schoolYearId }: { schoolYearId: number }) {
       const relevantLegs =
         viewMode === "class"
           ? activity.legs.filter((leg) => leg.class_group_id !== null && myGroupIds.has(leg.class_group_id))
-          : activity.legs.filter((leg) => leg.teacher_ids.includes(selectedTeacherId ?? -1));
+          : viewMode === "subject"
+            ? activity.legs.filter((leg) => leg.subject_id === selectedSubjectId)
+            : activity.legs.filter((leg) => leg.teacher_ids.includes(selectedTeacherId ?? -1));
       if (relevantLegs.length === 0) continue;
 
       const periodsTouched = touchedPeriods(tickToPeriodByDay[slot.day_of_week] ?? [], slot.start_tick, slot.duration_ticks);
@@ -128,7 +134,12 @@ export function TimetableGridPage({ schoolYearId }: { schoolYearId: number }) {
         const label =
           viewMode === "class"
             ? leg.teacher_ids.map((id) => teacherById[id]?.initials ?? String(id)).join("/")
-            : (leg.class_group_id ? classGroupLabelById[leg.class_group_id] : null) ?? "Ekstra gruppe";
+            : viewMode === "subject"
+              ? ((leg.class_group_id ? classGroupLabelById[leg.class_group_id] : null) ?? "Ekstra gruppe") +
+                (leg.teacher_ids.length
+                  ? ` · ${leg.teacher_ids.map((id) => teacherById[id]?.initials ?? String(id)).join("/")}`
+                  : "")
+              : (leg.class_group_id ? classGroupLabelById[leg.class_group_id] : null) ?? "Ekstra gruppe";
         const lesson: Lesson = { subjectCode: subject?.short_code ?? "?", subjectName: subject?.name ?? "?", label };
         for (const period of periodsTouched) {
           const key = `${slot.day_of_week}:${period}`;
@@ -150,6 +161,7 @@ export function TimetableGridPage({ schoolYearId }: { schoolYearId: number }) {
     tickToPeriodByDay,
     viewMode,
     selectedTeacherId,
+    selectedSubjectId,
   ]);
 
   const maxPeriods = Math.max(0, ...Object.values(maxPeriodByDay));
@@ -168,7 +180,9 @@ export function TimetableGridPage({ schoolYearId }: { schoolYearId: number }) {
             ? "Viser timeplan for valgt klasse."
             : viewMode === "teacher"
               ? "Viser timeplan for valgt lærer."
-              : "Rom er ikke registrert i systemet ennå."
+              : viewMode === "subject"
+                ? "Viser hvilke klasser som har valgt fag i hver periode -- nyttig for å sjekke at f.eks. KRØV ikke havner i for mange klasser samtidig."
+                : "Rom er ikke registrert i systemet ennå."
         }
         actions={
           <>
@@ -201,6 +215,7 @@ export function TimetableGridPage({ schoolYearId }: { schoolYearId: number }) {
             options={[
               { value: "class", label: "Klasse" },
               { value: "teacher", label: "Lærer" },
+              { value: "subject", label: "Fag" },
               { value: "room", label: "Rom" },
             ]}
           />
@@ -228,6 +243,19 @@ export function TimetableGridPage({ schoolYearId }: { schoolYearId: number }) {
             {(teachers.data ?? []).map((t) => (
               <option key={t.id} value={t.id}>
                 {t.initials}
+              </option>
+            ))}
+          </select>
+        )}
+        {viewMode === "subject" && (
+          <select
+            className="rounded-lg border border-border bg-surface px-3 py-2 text-sm font-medium text-ink shadow-sm"
+            value={selectedSubjectId ?? ""}
+            onChange={(e) => setSelectedSubjectId(Number(e.target.value))}
+          >
+            {(subjects.data ?? []).map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.short_code} — {s.name}
               </option>
             ))}
           </select>
