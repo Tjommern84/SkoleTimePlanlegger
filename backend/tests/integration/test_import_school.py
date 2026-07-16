@@ -366,14 +366,28 @@ def test_import_validation_errors_are_all_or_nothing(client, mutate, expected_me
     assert all(y["label"] != payload["school_year_label"] for y in years)
 
 
-def test_import_duplicate_school_year_label_rejected(client):
-    payload = _valid_payload()
-    resp1 = client.post("/api/import/school", json=payload)
+def test_import_duplicate_school_year_label_auto_suffixed(client):
+    # Re-importing the same file (e.g. after a bugfix) is a common workflow
+    # -- rather than rejecting it, pick the next free "label (2)", "label
+    # (3)", ... automatically, and warn about it rather than silently
+    # renaming without a trace.
+    label = _valid_payload()["school_year_label"]
+
+    resp1 = client.post("/api/import/school", json=_valid_payload())
     assert resp1.status_code == 201
+    assert resp1.json()["warnings"] == []
 
     resp2 = client.post("/api/import/school", json=_valid_payload())
-    assert resp2.status_code == 422
-    assert any("finnes allerede" in e["message"] for e in resp2.json()["detail"]["errors"])
+    assert resp2.status_code == 201
+    assert any("finnes allerede" in w["message"] and f"{label} (2)" in w["message"] for w in resp2.json()["warnings"])
+
+    resp3 = client.post("/api/import/school", json=_valid_payload())
+    assert resp3.status_code == 201
+    assert any(f"{label} (3)" in w["message"] for w in resp3.json()["warnings"])
+
+    years = client.get("/api/school-years").json()
+    labels = {y["label"] for y in years}
+    assert labels == {label, f"{label} (2)", f"{label} (3)"}
 
 
 def test_import_cannot_reuse_another_zones_teacher_by_initials(client):

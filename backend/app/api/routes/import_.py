@@ -166,17 +166,28 @@ def import_school(
                 )
             )
 
-    # --- Phase 2: one DB-dependent pre-check --------------------------------
-    existing_year = db.scalars(
-        select(SchoolYear).where(
-            SchoolYear.zone_id == membership.zone_id, SchoolYear.label == payload.school_year_label
-        )
-    ).first()
-    if existing_year is not None:
-        errors.append(
+    # --- Phase 2: resolve a non-colliding school-year label -----------------
+    # Re-importing the same file (e.g. after a bugfix) is a common,
+    # legitimate workflow -- rather than blocking it and forcing the
+    # operator to hunt down and delete the old school year first, pick the
+    # next free "label (2)", "label (3)", ... suffix automatically and
+    # surface it as a warning so it's never a silent surprise.
+    existing_labels = set(
+        db.scalars(select(SchoolYear.label).where(SchoolYear.zone_id == membership.zone_id))
+    )
+    final_label = payload.school_year_label
+    if final_label in existing_labels:
+        n = 2
+        while f"{payload.school_year_label} ({n})" in existing_labels:
+            n += 1
+        final_label = f"{payload.school_year_label} ({n})"
+        warnings.append(
             ImportIssue(
                 path="school_year_label",
-                message=f"Et skoleår med navnet '{payload.school_year_label}' finnes allerede i denne sonen.",
+                message=(
+                    f"Et skoleår med navnet '{payload.school_year_label}' finnes allerede i denne sonen -- "
+                    f"denne importen ble i stedet opprettet som '{final_label}'."
+                ),
             )
         )
 
@@ -190,7 +201,7 @@ def import_school(
         )
 
     # --- Phase 3: creation (only reached with zero errors) ------------------
-    school_year = SchoolYear(zone_id=membership.zone_id, label=payload.school_year_label)
+    school_year = SchoolYear(zone_id=membership.zone_id, label=final_label)
     db.add(school_year)
     db.flush()
 
