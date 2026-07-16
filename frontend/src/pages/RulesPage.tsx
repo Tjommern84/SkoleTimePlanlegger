@@ -101,6 +101,22 @@ const SOFT_RULES: RuleDef[] = [
     description:
       "Selv om reglene tillater opptil 2 samtidige KRØV-økter (se den harde regelen over), foretrekker solveren å holde seg til 1 om gangen når det er mulig, av hensyn til hallplass.",
   },
+  {
+    name: "Bør ligge i periode 1-2",
+    kind: "soft",
+    active: true,
+    weight: "middels",
+    description:
+      "Styres av \"Bør ligge i periode 1-2\"-flagget på faget (f.eks. valgfag). Strengere enn \"bør ligge før lunsj\" — solveren prøver spesifikt å legge faget i de to første periodene.",
+  },
+  {
+    name: "Bør ikke ligge fredag etter lunsj",
+    kind: "soft",
+    active: true,
+    weight: "middels",
+    description:
+      "Styres av \"Unngå fredag etter lunsj\"-flagget på faget (f.eks. fremmedspråk). En myk preferanse — brytes hvis timeplanen ellers ikke går opp.",
+  },
 ];
 
 const FIXED_RULES: RuleDef[] = [

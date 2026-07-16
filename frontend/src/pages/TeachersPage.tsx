@@ -97,7 +97,10 @@ export function TeachersPage({ schoolYearId }: { schoolYearId: number }) {
   for (const a of activities.data ?? []) {
     for (const leg of a.legs) {
       const subject = subjectById[leg.subject_id];
-      const hours = (a.occurrences_per_week * a.duration_ticks * 0.5) / (leg.teacher_ids.length || 1);
+      // Each co-teacher is present for the whole session, so each gets the
+      // full hours credited -- not split between them. Splitting was
+      // undercounting real teaching load whenever a teacher co-taught.
+      const hours = a.occurrences_per_week * a.duration_ticks * 0.5;
       for (const teacherId of leg.teacher_ids) {
         subjectCodesByTeacher[teacherId] = subjectCodesByTeacher[teacherId] ?? new Set();
         if (subject) subjectCodesByTeacher[teacherId].add(subject.short_code);
