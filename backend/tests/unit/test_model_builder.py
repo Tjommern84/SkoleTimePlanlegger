@@ -45,6 +45,8 @@ def _subject(id_, **kwargs):
         needs_consecutive_periods=False,
         prefer_early_periods=False,
         avoid_friday_afternoon=False,
+        no_repeat_same_day=False,
+        max_concurrent_sessions=None,
     )
     defaults.update(kwargs)
     return SubjectData(id=id_, **defaults)
@@ -208,6 +210,79 @@ def test_whole_and_half_group_are_mutually_exclusive():
     )
     _, status = _solve(built)
     assert status == cp_model.INFEASIBLE
+
+
+def test_no_repeat_same_day_forces_two_sessions_to_different_days():
+    grid = _normal_day_grid(days=(DayOfWeek.MON, DayOfWeek.TUE))
+    subj = _subject(1, no_repeat_same_day=True)
+    p1_mon = grid.day_range[DayOfWeek.MON][0]
+    # Both sessions fixed to Monday for the same class -- must be infeasible.
+    sessions = [
+        SessionInstance(key="a", activity_id=1, occurrence_index=0, duration_ticks=2,
+                         legs=(LegData(class_group_id=100, subject_id=1, teacher_ids=(1,)),),
+                         fixed_start_tick=p1_mon),
+        SessionInstance(key="b", activity_id=2, occurrence_index=0, duration_ticks=2,
+                         legs=(LegData(class_group_id=100, subject_id=1, teacher_ids=(2,)),),
+                         fixed_start_tick=p1_mon),
+    ]
+    built = build_model(grid, sessions, {1: subj}, [])
+    _, status = _solve(built)
+    assert status == cp_model.INFEASIBLE
+
+    # Same setup, but free to place -- must land on different days.
+    sessions_free = [
+        SessionInstance(key="a", activity_id=1, occurrence_index=0, duration_ticks=2,
+                         legs=(LegData(class_group_id=100, subject_id=1, teacher_ids=(1,)),)),
+        SessionInstance(key="b", activity_id=2, occurrence_index=0, duration_ticks=2,
+                         legs=(LegData(class_group_id=100, subject_id=1, teacher_ids=(2,)),)),
+    ]
+    built2 = build_model(grid, sessions_free, {1: subj}, [])
+    solver2, status2 = _solve(built2)
+    assert status2 in (cp_model.OPTIMAL, cp_model.FEASIBLE)
+
+    def assigned_day(built_model, solver, key):
+        for s, var in built_model.start_vars[key].items():
+            if solver.Value(var):
+                return grid.ticks[s].day
+        raise AssertionError("no start assigned")
+
+    assert assigned_day(built2, solver2, "a") != assigned_day(built2, solver2, "b")
+
+
+def test_no_repeat_same_day_unset_allows_same_day():
+    grid = _normal_day_grid(days=(DayOfWeek.MON, DayOfWeek.TUE))
+    subj = _subject(1)  # no_repeat_same_day defaults to False
+    p1_mon = grid.day_range[DayOfWeek.MON][0]
+    sessions = [
+        SessionInstance(key="a", activity_id=1, occurrence_index=0, duration_ticks=2,
+                         legs=(LegData(class_group_id=100, subject_id=1, teacher_ids=(1,)),),
+                         fixed_start_tick=p1_mon),
+        SessionInstance(key="b", activity_id=2, occurrence_index=0, duration_ticks=2,
+                         legs=(LegData(class_group_id=100, subject_id=1, teacher_ids=(2,)),),
+                         fixed_start_tick=grid.day_range[DayOfWeek.MON][0] + 2),
+    ]
+    built = build_model(grid, sessions, {1: subj}, [])
+    _, status = _solve(built)
+    assert status in (cp_model.OPTIMAL, cp_model.FEASIBLE)
+
+
+def test_max_concurrent_sessions_cap_allows_one_but_not_two():
+    grid = _normal_day_grid()
+    subj = _subject(1, max_concurrent_sessions=1)
+    p1 = grid.day_range[DayOfWeek.MON][0]
+    sessions = [
+        SessionInstance(key=f"n{i}", activity_id=i, occurrence_index=0, duration_ticks=2,
+                         legs=(LegData(class_group_id=100 + i, subject_id=1, teacher_ids=(i,)),),
+                         fixed_start_tick=p1)
+        for i in range(2)
+    ]
+    built = build_model(grid, sessions, {1: subj}, [])
+    _, status = _solve(built)
+    assert status == cp_model.INFEASIBLE
+
+    built2 = build_model(grid, sessions[:1], {1: subj}, [])
+    _, status2 = _solve(built2)
+    assert status2 in (cp_model.OPTIMAL, cp_model.FEASIBLE)
 
 
 def test_teacher_unavailability_blocks_the_forbidden_tick():

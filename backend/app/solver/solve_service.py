@@ -93,6 +93,8 @@ def _load_subjects(db: Session, school_year_id: int) -> dict[int, SubjectData]:
             needs_consecutive_periods=s.needs_consecutive_periods,
             prefer_early_periods=s.prefer_early_periods,
             avoid_friday_afternoon=s.avoid_friday_afternoon,
+            no_repeat_same_day=s.no_repeat_same_day,
+            max_concurrent_sessions=s.max_concurrent_sessions,
         )
         for s in subjects
     }

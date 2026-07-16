@@ -13,6 +13,8 @@ class SubjectCreate(BaseModel):
     needs_consecutive_periods: bool = False
     prefer_early_periods: bool = False
     avoid_friday_afternoon: bool = False
+    no_repeat_same_day: bool = False
+    max_concurrent_sessions: int | None = None
 
 
 class SubjectRead(SubjectCreate):

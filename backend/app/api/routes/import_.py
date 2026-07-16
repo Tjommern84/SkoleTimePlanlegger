@@ -269,6 +269,8 @@ def import_school(
             needs_consecutive_periods=s.needs_consecutive_periods,
             prefer_early_periods=s.prefer_early_periods,
             avoid_friday_afternoon=s.avoid_friday_afternoon,
+            no_repeat_same_day=s.no_repeat_same_day,
+            max_concurrent_sessions=s.max_concurrent_sessions,
         )
         db.add(subject)
         db.flush()

@@ -52,6 +52,7 @@ def _subject(id_, **kwargs):
         short_code=f"S{id_}", is_krov=False, uses_hall=False, is_trinnfag=False,
         avoid_consecutive=False, prefer_before_lunch=False, needs_consecutive_periods=False,
         prefer_early_periods=False, avoid_friday_afternoon=False,
+        no_repeat_same_day=False, max_concurrent_sessions=None,
     )
     defaults.update(kwargs)
     return SubjectData(id=id_, **defaults)

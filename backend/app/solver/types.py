@@ -54,6 +54,8 @@ class SubjectData:
     needs_consecutive_periods: bool
     prefer_early_periods: bool
     avoid_friday_afternoon: bool
+    no_repeat_same_day: bool
+    max_concurrent_sessions: int | None
 
 
 @dataclass(frozen=True)

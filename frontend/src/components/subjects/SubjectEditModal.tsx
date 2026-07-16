@@ -60,6 +60,12 @@ const FLAG_FIELDS: { key: keyof SubjectCreate; label: string; hint: string }[] =
     hint:
       "En myk preferanse for fag som helst ikke bør ligge på fredag etter lunsjpausen, f.eks. fremmedspråk. Ikke et hardt krav.",
   },
+  {
+    key: "no_repeat_same_day",
+    label: "Aldri flere enn én økt per dag (hardt krav)",
+    hint:
+      "Et HARDT krav — faget kan aldri havne flere ganger samme dag for samme klasse, f.eks. matematikk. Motsatt av \"Unngå sammenhengende økter\" (som tillater to økter samme dag, bare ikke rett etter hverandre) — bruk ikke begge på samme fag.",
+  },
 ];
 
 const EMPTY: SubjectCreate = {
@@ -74,6 +80,8 @@ const EMPTY: SubjectCreate = {
   needs_consecutive_periods: false,
   prefer_early_periods: false,
   avoid_friday_afternoon: false,
+  no_repeat_same_day: false,
+  max_concurrent_sessions: null,
 };
 
 export function SubjectEditModal({ schoolYearId, subject, onClose }: SubjectEditModalProps) {
@@ -147,6 +155,32 @@ export function SubjectEditModal({ schoolYearId, subject, onClose }: SubjectEdit
                 </label>
               ))}
             </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-ink-muted">
+              Maks samtidige økter for hele skolen (hardt krav)
+            </label>
+            <input
+              type="number"
+              min={0}
+              className="w-24 rounded-lg border border-border px-3 py-1.5 text-sm"
+              placeholder="Ingen grense"
+              value={form.max_concurrent_sessions ?? ""}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  max_concurrent_sessions: e.target.value === "" ? null : Number(e.target.value),
+                })
+              }
+            />
+            {showHints && (
+              <p className="mt-1 text-xs text-ink-soft">
+                Sett et tall hvis faget deler på en begrenset ressurs skolen bare har noen få av (f.eks.
+                naturfagrom/labber) — solveren tillater da aldri flere samtidige økter av dette faget enn
+                tallet, uansett hvilke klasser det gjelder. La stå tom for ingen grense.
+              </p>
+            )}
           </div>
 
           {error && <p className="text-xs text-danger">Kunne ikke lagre ({(error as Error).message}).</p>}

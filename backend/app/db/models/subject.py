@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, ForeignKey, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Integer, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -22,6 +22,17 @@ class Subject(Base):
     needs_consecutive_periods: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     prefer_early_periods: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     avoid_friday_afternoon: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # HARD rule: this subject can never occur twice in the same day for the
+    # same class -- opt-in per subject (not universal) since some subjects
+    # (e.g. Musikk's avoid_consecutive) deliberately allow twice-a-day as
+    # long as the two sessions aren't adjacent periods. A universal version
+    # of this rule was tried and reverted -- see docs/domain-notes.md.
+    no_repeat_same_day: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # HARD cap: at most this many concurrent sessions of this subject may
+    # run anywhere in the school at once (school-wide, not per-class) --
+    # e.g. limited science-lab capacity. Null = no cap. Independent of the
+    # is_krov/uses_hall mechanism (which is specific to gym/hall exclusivity).
+    max_concurrent_sessions: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class SubjectHourAllocation(Base):

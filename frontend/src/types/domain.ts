@@ -101,7 +101,15 @@ export interface paths {
         get: operations["get_school_year_api_school_years__school_year_id__get"];
         put?: never;
         post?: never;
-        /** Delete School Year */
+        /**
+         * Delete School Year
+         * @description Deleting a school year always means "delete everything under it too"
+         *     -- unlike Trinn/SchoolClass deletes elsewhere in this file, there's no
+         *     legitimate case where a user wants to delete a school year but keep its
+         *     trinn/subjects/activities around (they'd just become orphaned). So this
+         *     cascades explicitly, in FK dependency order, rather than relying on the
+         *     restrict-by-default behavior used for structural entities.
+         */
         delete: operations["delete_school_year_api_school_years__school_year_id__delete"];
         options?: never;
         head?: never;
@@ -1207,6 +1215,13 @@ export interface components {
              * @default false
              */
             avoid_friday_afternoon: boolean;
+            /**
+             * No Repeat Same Day
+             * @default false
+             */
+            no_repeat_same_day: boolean;
+            /** Max Concurrent Sessions */
+            max_concurrent_sessions?: number | null;
         };
         /** SubjectHourAllocationCreate */
         SubjectHourAllocationCreate: {
@@ -1275,6 +1290,13 @@ export interface components {
              */
             avoid_friday_afternoon: boolean;
             /**
+             * No Repeat Same Day
+             * @default false
+             */
+            no_repeat_same_day: boolean;
+            /** Max Concurrent Sessions */
+            max_concurrent_sessions?: number | null;
+            /**
              * Hour Allocations
              * @default []
              */
@@ -1328,6 +1350,13 @@ export interface components {
              * @default false
              */
             avoid_friday_afternoon: boolean;
+            /**
+             * No Repeat Same Day
+             * @default false
+             */
+            no_repeat_same_day: boolean;
+            /** Max Concurrent Sessions */
+            max_concurrent_sessions?: number | null;
             /** Id */
             id: number;
         };

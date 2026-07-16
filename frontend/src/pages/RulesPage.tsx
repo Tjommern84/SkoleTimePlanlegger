@@ -58,6 +58,20 @@ const HARD_RULES: RuleDef[] = [
     description:
       "Hvis en klasse er delt i to halvgrupper for en økt, kan ikke hele klassen samtidig ha en annen, felles aktivitet — de representerer de samme elevene.",
   },
+  {
+    name: "Aldri flere enn én økt per dag for et fag (per fag, valgfritt)",
+    kind: "hard",
+    active: true,
+    description:
+      "Styres av \"Aldri flere enn én økt per dag\"-flagget på faget (se Fag og timetall) — av og på per fag, ikke en generell regel for alle fag. Motsatt av \"Unngå sammenhengende økter\" (Musikk), som bevisst tillater to økter samme dag så lenge de ikke ligger rett etter hverandre.",
+  },
+  {
+    name: "Maks samtidige økter for et fag med begrenset ressurs (per fag, valgfritt)",
+    kind: "hard",
+    active: true,
+    description:
+      "Styres av \"Maks samtidige økter for hele skolen\"-feltet på faget (se Fag og timetall) — for fag som deler en knapp ressurs skolen bare har noen få av, f.eks. naturfagrom/labber. Uavhengig av KRØV/hall-mekanismen over.",
+  },
 ];
 
 const SOFT_RULES: RuleDef[] = [
