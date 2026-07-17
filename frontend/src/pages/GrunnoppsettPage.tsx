@@ -295,7 +295,7 @@ function TrinnSection({ schoolYearId }: { schoolYearId: number }) {
 }
 
 interface NewPeriodForm {
-  day_of_week: DayOfWeek;
+  days: DayOfWeek[];
   period_number: string;
   start_time: string;
   end_time: string;
@@ -304,7 +304,7 @@ interface NewPeriodForm {
 }
 
 const EMPTY_PERIOD_FORM: NewPeriodForm = {
-  day_of_week: "MON",
+  days: ["MON"],
   period_number: "",
   start_time: "",
   end_time: "",
@@ -319,21 +319,28 @@ function PeriodsSection({ schoolYearId }: { schoolYearId: number }) {
   const deletePeriod = useDeletePeriod();
   const [form, setForm] = useState<NewPeriodForm>(EMPTY_PERIOD_FORM);
 
+  const toggleDay = (day: DayOfWeek, checked: boolean) => {
+    setForm({
+      ...form,
+      days: checked ? [...form.days, day] : form.days.filter((d) => d !== day),
+    });
+  };
+
   const addPeriod = () => {
     const periodNumber = Number(form.period_number);
-    if (!periodNumber || !form.start_time || !form.end_time) return;
-    createPeriod.mutate(
-      {
+    if (!periodNumber || !form.start_time || !form.end_time || form.days.length === 0) return;
+    for (const day of form.days) {
+      createPeriod.mutate({
         school_year_id: schoolYearId,
-        day_of_week: form.day_of_week,
+        day_of_week: day,
         period_number: periodNumber,
         start_time: `${form.start_time}:00`,
         end_time: `${form.end_time}:00`,
         is_splittable: form.is_splittable,
         is_before_lunch: form.is_before_lunch,
-      },
-      { onSuccess: () => setForm(EMPTY_PERIOD_FORM) },
-    );
+      });
+    }
+    setForm(EMPTY_PERIOD_FORM);
   };
 
   const [showHint, setShowHint] = useState(false);
@@ -353,6 +360,9 @@ function PeriodsSection({ schoolYearId }: { schoolYearId: number }) {
           Dette er selve grunnmuren timeplanen bygges på — legg til én rad per periode, per dag skolen faktisk har
           undervisning. En dag uten lagte perioder blir automatisk en fridag/kort dag for solveren (du trenger f.eks.
           ikke legge inn periode 5–6 på en dag som slutter tidlig).
+          <br />
+          Kryss av flere dager samtidig for å legge til samme periode på alle med én gang (f.eks. mandag, tirsdag,
+          torsdag og fredag — men ikke onsdag, hvis elevene starter senere den dagen).
           <br />
           <strong>Splittbar (halvtime)</strong>: kryss av hvis perioden kan deles i to 30-minutters økter (nyttig for
           fag med brøkdels-timetall). To splittbare perioder samme dag kan også slås sammen til én 60-minutters økt.
@@ -443,18 +453,23 @@ function PeriodsSection({ schoolYearId }: { schoolYearId: number }) {
 
       <div className="flex flex-wrap items-end gap-2 rounded-lg bg-bg-soft p-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-ink-muted">Dag</label>
-          <select
-            className="rounded-lg border border-border px-2 py-1.5 text-sm"
-            value={form.day_of_week}
-            onChange={(e) => setForm({ ...form, day_of_week: e.target.value as DayOfWeek })}
-          >
+          <label className="mb-1 block text-xs font-medium text-ink-muted">Dag(er)</label>
+          <div className="flex flex-wrap gap-1.5">
             {DAY_OPTIONS.map((d) => (
-              <option key={d.value} value={d.value}>
+              <label
+                key={d.value}
+                className="flex items-center gap-1 rounded-full border border-border bg-surface px-2.5 py-1.5 text-sm has-[:checked]:border-primary has-[:checked]:bg-primary-soft"
+              >
+                <input
+                  type="checkbox"
+                  className="accent-primary"
+                  checked={form.days.includes(d.value)}
+                  onChange={(e) => toggleDay(d.value, e.target.checked)}
+                />
                 {d.label}
-              </option>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-ink-muted">Periodenr.</label>
