@@ -26,4 +26,4 @@ imports/
 # Raw source spreadsheets/dumps used to build a school-import JSON also
 # contain real teacher initials/names -- same reasoning as imports/ above.
 docs/*.xlsx
-docs/timefordeling_dump.txt
+docs/*_dump.txt
